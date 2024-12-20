@@ -3,5 +3,5 @@
 ## Installation
 
 ```
-pip install my_library
+pip install tide_analytics
 ```

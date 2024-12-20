@@ -1,4 +1,4 @@
-site_name: my_library
+site_name: tide_analytics
 
 theme: "material"
 
@@ -9,4 +9,4 @@ plugins:
         options:
           show_source: false # change this if you prefer to be able to show the source code inside the docs
           heading_level: 2
-          docstring_style: "numpy" # default is google
+          docstring_style: "google" # default is google

@@ -1,4 +1,4 @@
-LIB = my_library
+LIB = tide_analytics
 
 check: lint typecheck test doctest
 

@@ -8,7 +8,7 @@ import mikeio
 from sklearn.cluster import DBSCAN
 from scipy.optimize import minimize_scalar
 
-from .helpers import *
+from .helpers import TideError, Tide, TidalErrors, TidalCharacteristics, Variable, NonAlternatingHTLTsError, NoKenterPointsFoundError, CurrentsToNoisyError, NotEnoughTidesError, NoHTLTsFoundError, NonMatchingKenterError, FallsWetError, NotEnoughWaterError, FallsPartiallyDryError, FallsPartiallyWetError
 
 class TidalSeries:
 
@@ -42,11 +42,8 @@ class TidalSeries:
 
         if isinstance(ignore_error_types, str):
             if ignore_error_types not in ["all_tidal", "all"]:
-                raise ValueError(f"ignore_error_types must be one of ['all_tidal', 'all'] or any TideError.")
+                raise ValueError("ignore_error_types must be one of ['all_tidal', 'all'] or any TideError.")
         
-        self.surface_elevation = surface_elevation
-        self.current_speed = current_speed
-        self.current_direction = current_direction
         self.SE_DIF = SE_DIF
         self.SE_PROM = SE_PROM
         self.CS_DIF = CS_DIF
@@ -68,9 +65,6 @@ class TidalSeries:
         
         self.tidal_errors = TidalErrors()
         self.tidal_characteristics = TidalCharacteristics()
-        self.tides = None
-        self.HTLTs = None
-        self.kenter = None
 
         self.surface_elevation, self.current_speed, self.current_direction = self.parse_input(surface_elevation, 
                                                                                               current_speed, 
@@ -114,12 +108,16 @@ class TidalSeries:
                 self.fallswet = self._fallswet()
                 self.only_SE = False
 
-                if self.fallsdry:
-                    self.tidal_errors.FallsPartiallyDryWarning = True
-                if self.fallswet:
-                    self.tidal_errors.FallsPartiallyWetWarning = True
-
                 self.HTLTs = self.get_HTLTs()
+
+                if self.fallsdry:
+                    self.tides = self.get_tides(self.HTLTs, None)
+                    self.aggregate_tidal_characteristics(self.tides)
+                    raise FallsPartiallyDryError("The element falls partially dry.")
+                if self.fallswet:
+                    self.tides = self.get_tides(self.HTLTs, None)
+                    self.aggregate_tidal_characteristics(self.tides)
+                    raise FallsPartiallyWetError("The element falls partially wet.")
 
                 self.kenter_CS = self.get_kenter_by_CS()
                 self.kenter_CD = self.get_kenter_by_CD()
@@ -180,13 +178,11 @@ class TidalSeries:
         below = np.maximum(0, h - surface_elevation).sum()
         return abs(above - below)
 
-    def split_tides(self, HTLTs: pd.DataFrame, kenter: pd.DataFrame | None):
+    def split_tides(self, HTLTs: pd.DataFrame, kenter: pd.DataFrame):
         
         tides = []
 
         se = self.surface_elevation.data.name
-        cs = self.current_speed.data.name
-
 
         if self.fallsdry or self.fallswet:
     
@@ -245,10 +241,10 @@ class TidalSeries:
                     flood_current_time = [index_1_kenter, index_2_kenter],
                     ebb_current_duration = index_3_kenter - index_2_kenter,
                     flood_current_duration = index_2_kenter - index_1_kenter,
-                    max_flood_current = np.max(self.current_speed.data.loc[index_1_kenter:index_2_kenter]),
-                    max_ebb_current = np.max(self.current_speed.data.loc[index_2_kenter:index_3_kenter]),
-                    mean_flood_current = np.mean(self.current_speed.data.loc[index_1_kenter:index_2_kenter]),
-                    mean_ebb_current = np.mean(self.current_speed.data.loc[index_2_kenter:index_3_kenter]),
+                    max_flood_current = float(np.max(self.current_speed.data.loc[index_1_kenter:index_2_kenter])),
+                    max_ebb_current = float(np.max(self.current_speed.data.loc[index_2_kenter:index_3_kenter])),
+                    mean_flood_current = float(np.mean(self.current_speed.data.loc[index_1_kenter:index_2_kenter])),
+                    mean_ebb_current = float(np.mean(self.current_speed.data.loc[index_2_kenter:index_3_kenter])),
                     tidal_range = abs(row_2_HTLTs[se] - 0.5 * (row_3_HTLTs[se] + row_1_HTLTs[se])),
                     high_tide = row_2_HTLTs[se],
                     high_tide_time = index_2_HTLTs,
@@ -261,7 +257,7 @@ class TidalSeries:
 
         return tides
 
-    def get_HTLTs(self):
+    def get_HTLTs(self) -> pd.DataFrame:
         """
         Calculates the high and low tide levels (HTLTs) from the surface elevation data.
 
@@ -317,6 +313,7 @@ class TidalSeries:
                 raise NonAlternatingHTLTsError("The types are not alternating in the HTLTs DataFrame. This is not supported.")
         else:
             HTLTs = HTLTs[HTLTs["type"] == "HT"]
+
         return HTLTs
 
     def get_kenter_by_CS(self):
@@ -331,24 +328,21 @@ class TidalSeries:
             None
 
         Returns:
-            pd.DataFrame or None: A pandas DataFrame containing the kenter times and
+            pd.DataFrame: A pandas DataFrame containing the kenter times and
                 types, or None if the element falls dry or wet.
 
         Raises:
             CurrentsToNoisyError: If the current direction data is too noisy to find
                 the kenter.
         """
-        if self.fallsdry or self.fallswet:
-            kenter = None
-        else:
-            
+        if not self.fallsdry and not self.fallswet:
             data = self.current_direction.data.values.reshape(-1, 1)
             dbscan = DBSCAN(eps=self.DBSCAN_EPS, min_samples=self.DBSCAN_MINSAMPLES)
             unique_clusters = np.unique(dbscan.fit_predict(data))
 
             if len(unique_clusters) < 2: 
                 self.only_SE = True
-                self.tides = self.get_tides(self.HTLTs, self.kenter)
+                self.tides = self.get_tides(self.HTLTs, None)
                 self.tidal_characteristics = self.aggregate_tidal_characteristics(self.tides)
                 raise CurrentsToNoisyError(f"The current direction data is to noisy to find the kenter. Found {unique_clusters} clusters. {2} clusters are allowed")
 
@@ -368,9 +362,9 @@ class TidalSeries:
 
             kenter = kenter.sort_index()       
 
-        return kenter
+            return kenter
 
-    def get_kenter_by_CD(self):
+    def get_kenter_by_CD(self) -> pd.DataFrame:
         """
         Calculates the kenter times and types from the current direction.
 
@@ -385,9 +379,7 @@ class TidalSeries:
                 types, or None if the element falls dry or wet.
 
         """
-        if self.fallsdry or self.fallswet:
-            kenter = None
-        else:
+        if not self.fallsdry and not self.fallswet:
 
             mean_CD = self.current_direction.data.mean()
 
@@ -412,7 +404,7 @@ class TidalSeries:
 
             kenter = kenter.sort_index()       
 
-        return kenter
+            return kenter
 
     # def get_kenter_by_CD(self):
     #     """
@@ -441,9 +433,7 @@ class TidalSeries:
     #             types, or None if the element falls dry or wet.
 
     #     """
-    #     if self.fallsdry or self.fallswet:
-    #         kenter = None
-    #     else:
+    #     if not self.fallsdry and not self.fallswet:
 
     #         mean_CD = self.current_direction.data.mean()
 
@@ -495,9 +485,7 @@ class TidalSeries:
         Raises:
             NoKenterPointsFoundError: If no kenter points were found.
         """
-        if self.fallsdry or self.fallswet:
-            return None
-        else:
+        if not self.fallsdry and not self.fallswet:
             HTLTs = HTLTs.sort_index()
 
             if kenter_CD.empty and kenter_CS.empty:
@@ -522,11 +510,10 @@ class TidalSeries:
                     return matched_kenter
                 else:
                     self.only_SE = True
-                    self.tides = self.get_tides(self.HTLTs, self.kenter)
+                    self.tides = self.get_tides(self.HTLTs, None)
                     self.tidal_characteristics = self.aggregate_tidal_characteristics(self.tides)
                     self.kenter = matched_kenter_CD
                     raise NonMatchingKenterError(f"Kenter points could not be matched to HTLTs. \nlength of kenter: {len(matched_kenter)}\nlength of HTLTs: {len(HTLTs)}\nSanity CS: {sanity_CS}\nSanity CD: {sanity_CD}")
-
           
     def _match_kenter(self, kenter: pd.DataFrame, HTLTs: pd.DataFrame):
         """
@@ -557,7 +544,7 @@ class TidalSeries:
 
         return matched_kenter, sane
 
-    def exclude_warmup(self, surface_elevation: Variable, current_speed: Variable, current_direction: Variable) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    def exclude_warmup(self, surface_elevation: Variable, current_speed: Variable, current_direction: Variable) -> tuple[Variable, Variable, Variable]:
         """
         Exclude the warmup period from the given data.
 
@@ -617,11 +604,11 @@ class TidalSeries:
 
         if ax is None:
             fig, ax = self._plot(self.surface_elevation, figsize = figsize)
-        legend_handles = {}
+        legend_handles: dict = {}
         y_min = ax.get_ylim()[0]
 
         if plot_tide_phase:
-            if self.tides is not None:
+            if hasattr(self, "tides"):
                 for tide in self.tides:
                     if tide.ebb_time is not None:
                         label = "Te"
@@ -641,7 +628,7 @@ class TidalSeries:
                             ax.hlines(y = y_min, xmin = tide.flood_time[0], xmax = tide.flood_time[1], linewidth=5, alpha=0.4, color='red', label=label)
 
         if plot_tidal_range:
-            if self.tides is not None:
+            if hasattr(self, "tides"):
                 label = "Thb"
                 for tide in self.tides:
                     if tide.tidal_range is not None:
@@ -651,7 +638,7 @@ class TidalSeries:
                             ax.vlines(x=tide.high_tide_time, ymin=tide.high_tide - tide.tidal_range, ymax=tide.high_tide, linewidth = 0.7, color='grey')
 
         if plot_mean_tide_level:
-            if self.tides is not None:
+            if hasattr(self, "tides"):
                 label = "Tmw"
                 for tide in self.tides:
                     if tide.mean_tide_level is not None:
@@ -661,7 +648,7 @@ class TidalSeries:
                             ax.hlines(y=tide.mean_tide_level, xmin=tide.low_tide_time, xmax=tide.low_tide_2_time, linewidth=0.7, color='grey', linestyle="dashed")
 
         if plot_HTLTs:
-            if self.HTLTs is not None:
+            if hasattr(self, "HTLTs"):
                 for index, HTLT in self.HTLTs.iterrows():
                     if HTLT["type"] == "HT":
                         label = "Thw"
@@ -677,7 +664,7 @@ class TidalSeries:
                             ax.plot(index, HTLT[self.surface_elevation.data.name], marker="v", color="green", alpha=0.7, linestyle='None')
 
         if plot_kenter:
-            if self.kenter is not None:
+            if hasattr(self, "kenter"):
                 for index, kenter in self.kenter.iterrows():
                     if kenter["type"] == "to_flood":
                         label = "Ke"
@@ -709,7 +696,7 @@ class TidalSeries:
 
         if ax is None:
             fig, ax = self._plot(self.current_direction, figsize=figsize)
-        legend_handles = {}
+        legend_handles: dict = {}
         y_min = ax.get_ylim()[0]
 
         if plot_mean_current_direction:
@@ -720,7 +707,7 @@ class TidalSeries:
                 ax.axhline(y = np.mean(self.current_direction.data), color = "grey", linestyle = "dashed", alpha=0.5, linewidth=0.7)
 
         if plot_tide_current_phase:
-            if self.tides is not None:
+            if hasattr(self, "tides"):
                 for tide in self.tides:
                     if tide.ebb_current_time is not None:
                         label = "Tce"
@@ -740,7 +727,7 @@ class TidalSeries:
                             ax.hlines(y = y_min, xmin = tide.flood_current_time[0], xmax = tide.flood_current_time[1], linewidth=5, alpha=0.4, color='red', label=label)
         
         if plot_kenter:
-            if self.kenter is not None:
+            if hasattr(self, "kenter"):
                 for index, kenter in self.kenter.iterrows():
                     if kenter["type"] == "to_flood":
                         label = "Ke"
@@ -756,7 +743,7 @@ class TidalSeries:
                             ax.plot(index, kenter[self.current_direction.data.name], marker="^", markerfacecolor="none", markeredgecolor="red", alpha=0.7, linestyle='None')
 
         if plot_HTLTs:
-            if self.HTLTs is not None:
+            if hasattr(self, "HTLTs"):
                 for index, HTLT in self.HTLTs.iterrows():
                     if HTLT["type"] == "HT":
                         label = "Thw"
@@ -787,11 +774,11 @@ class TidalSeries:
         
         if ax is None:
             fig, ax = self._plot(self.current_speed, figsize=figsize)
-        legend_handles = {}
+        legend_handles: dict = {}
         y_min = ax.get_ylim()[0]
 
         if plot_tide_current_phase:
-            if self.tides is not None:
+            if hasattr(self, "tides"):
                 for tide in self.tides:
                     if tide.ebb_current_time is not None:
                         label = "Tce"
@@ -811,7 +798,7 @@ class TidalSeries:
                             ax.hlines(y = y_min, xmin = tide.flood_current_time[0], xmax = tide.flood_current_time[1], linewidth=5, alpha=0.4, color='red', label=label)
 
         if plot_current_characteristics:
-            if self.tides is not None:
+            if hasattr(self, "tides"):
                 for tide in self.tides:
                     if tide.max_flood_current is not None:
                         label = "MaxFc"
@@ -839,7 +826,7 @@ class TidalSeries:
                             ax.hlines(y=tide.mean_ebb_current, xmin=tide.high_tide_time, xmax=tide.low_tide_2_time, alpha=0.5, linewidth=0.7, color='green', linestyle="dashed")
 
         if plot_kenter:
-            if self.kenter is not None:
+            if hasattr(self, "kenter"):
                 for index, kenter in self.kenter.iterrows():
                     if kenter["type"] == "to_flood":
                         label = "Ke"
@@ -855,7 +842,7 @@ class TidalSeries:
                             ax.plot(index, kenter[self.current_speed.data.name], marker="^", markerfacecolor="none", markeredgecolor="red", alpha=0.7, linestyle='None')
 
         if plot_HTLTs:
-            if self.HTLTs is not None:
+            if hasattr(self, "HTLTs"):
                 for index, HTLT in self.HTLTs.iterrows():
                     if HTLT["type"] == "HT":
                         label = "Thw"
@@ -969,19 +956,19 @@ class TidalSeries:
         total_count = self.surface_elevation.data.size
 
         if nan_count / total_count > self.THRSLD_NOWATER or total_count < self.MIN_DATA:
-            self.fallsdry = None
-            self.fallswet = None
+            self.fallsdry = False
+            self.fallswet = False
             raise NotEnoughWaterError(f"More than {self.THRSLD_NOWATER*100}% of surface elevation values are NaN or less then 10 data points.")
 
     @staticmethod
-    def _find_peaks_troughs(data: pd.DataFrame, time_difference: pd.Timedelta, prominence: float):
+    def _find_peaks_troughs(data: pd.DataFrame, time_difference: pd.Timedelta | None = None, prominence: float | None = None):
         """
         Finds the peaks and troughs of the input data.
 
         Args:
             data (pd.DataFrame): The data to find peaks and troughs in.
             time_difference (pd.Timedelta, optional): The time difference between consecutive data points. Defaults to None.
-            prominence (float): The prominence of the peaks and troughs to find. Defaults to None.
+            prominence (float | None): The prominence of the peaks and troughs to find. Defaults to None.
 
         Returns:
             tuple: A tuple containing two arrays, the first containing the indices of the peaks and the second containing the indices of the troughs.
@@ -992,14 +979,14 @@ class TidalSeries:
             difference = None
         peaks = find_peaks(data.values, distance=difference, prominence=prominence)[0] 
         troughs = find_peaks(-data.values, distance=difference, prominence=prominence)[0]
-        return peaks, troughs
 
+        return peaks, troughs
 
     def parse_input(self, surface_elevation: mikeio.DataArray, 
                     current_speed: mikeio.DataArray | None = None, 
                     current_direction: mikeio.DataArray | None = None, 
                     velocity_x: mikeio.DataArray | None = None, 
-                    velocity_y: mikeio.DataArray | None = None):
+                    velocity_y: mikeio.DataArray | None = None) -> tuple[Variable, Variable, Variable]:
         """
         Parses the input data for tidal analysis.
 

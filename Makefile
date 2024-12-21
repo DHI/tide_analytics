@@ -23,13 +23,8 @@ doctest:
 coverage: 
 	pytest --cov-report html --cov=$(LIB) tests/
 
-docs: FORCE
-	mkdocs build
-
 clean:
 	python -c "import shutil; shutil.rmtree('dist', ignore_errors=True)"
 	python -c "import shutil; shutil.rmtree('htmlcov', ignore_errors=True)"
 	python -c "import os; os.remove('.coverage') if os.path.exists('.coverage') else None"
 	python -c "import shutil; shutil.rmtree('site', ignore_errors=True)"
-
-FORCE:

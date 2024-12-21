@@ -2,20 +2,33 @@ from dataclasses import dataclass, asdict
 import pandas as pd
 import mikeio
 
-class TideError(Exception): pass
-class NonAlternatingHTLTsError(TideError): pass
-class NotEnoughTidesError(TideError): pass
-class NotEnoughWaterError(TideError): pass
-class NoKenterPointsFoundError(TideError): pass
-class NoHTLTsFoundError(TideError): pass
-class CurrentsToNoisyError(TideError): pass
-class NonMatchingKenterError(TideError): pass
-class FallsWetError(TideError): pass
+class TideError(Exception): 
+    pass
+class NonAlternatingHTLTsError(TideError): 
+    pass
+class NotEnoughTidesError(TideError): 
+    pass
+class NotEnoughWaterError(TideError): 
+    pass
+class NoKenterPointsFoundError(TideError): 
+    pass
+class NoHTLTsFoundError(TideError): 
+    pass
+class CurrentsToNoisyError(TideError): 
+    pass
+class NonMatchingKenterError(TideError): 
+    pass
+class FallsWetError(TideError): 
+    pass
+class FallsPartiallyDryError(TideError): 
+    pass
+class FallsPartiallyWetError(TideError): 
+    pass
 
 @dataclass
 class TidalErrors:
-    FallsPartiallyDryWarning: bool = False
-    FallsPartiallyWetWarning: bool = False
+    FallsPartiallyDryError: bool = False
+    FallsPartiallyWetError: bool = False
     FallsWetError: bool = False
     NonAlternatingHTLTsError: bool = False
     NotEnoughWaterError: bool = False
@@ -38,18 +51,18 @@ class TidalErrors:
 
 @dataclass
 class TidalCharacteristics:
-    MHW: float = None
-    MLW: float = None
-    TR: float = None
-    MTL: float = None
-    ECD: pd.Timedelta = None
-    FCD: pd.Timedelta = None
-    ED: pd.Timedelta = None
-    FD: pd.Timedelta = None
-    MAXECS: float = None
-    MAXFCS: float = None
-    MEANECS: float = None
-    MEANFCS: float = None
+    MHW: float | None = None
+    MLW: float | None = None
+    TR: float | None = None
+    MTL: float | None = None
+    ECD: pd.Timedelta | None = None
+    FCD: pd.Timedelta | None = None
+    ED: pd.Timedelta | None = None
+    FD: pd.Timedelta | None = None
+    MAXECS: float | None = None
+    MAXFCS: float | None = None
+    MEANECS: float | None = None
+    MEANFCS: float | None = None
 
     def __str__(self):
         def format_float(value):
@@ -82,25 +95,25 @@ class TidalCharacteristics:
 
 @dataclass
 class Tide:
-    ebb_time: list[pd.Timestamp, pd.Timestamp] = None
-    flood_time: list[pd.Timestamp, pd.Timestamp] = None
-    ebb_duration: pd.Timedelta = None
-    flood_duration: pd.Timedelta = None
-    ebb_current_time: list[pd.Timestamp, pd.Timestamp] = None
-    flood_current_time: list[pd.Timestamp, pd.Timestamp] = None
-    ebb_current_duration: pd.Timedelta = None
-    flood_current_duration: pd.Timedelta = None
-    max_flood_current: float = None
-    max_ebb_current: float = None
-    mean_flood_current: float = None
-    mean_ebb_current: float = None
-    tidal_range: float = None
-    high_tide: float = None
-    high_tide_time: pd.Timestamp = None
-    low_tide: float = None
-    low_tide_time: pd.Timestamp = None
-    low_tide_2: float = None
-    low_tide_2_time: pd.Timestamp = None
+    ebb_time: list[pd.Timestamp] | None = None
+    flood_time: list[pd.Timestamp] | None = None
+    ebb_duration: pd.Timedelta | None = None
+    flood_duration: pd.Timedelta | None = None
+    ebb_current_time: list[pd.Timestamp] | None = None
+    flood_current_time: list[pd.Timestamp] | None = None
+    ebb_current_duration: pd.Timedelta | None = None
+    flood_current_duration: pd.Timedelta | None = None
+    max_flood_current: float | None = None
+    max_ebb_current: float | None = None
+    mean_flood_current: float | None = None
+    mean_ebb_current: float | None = None
+    tidal_range: float | None = None
+    high_tide: float | None = None
+    high_tide_time: pd.Timestamp | None = None
+    low_tide: float | None = None
+    low_tide_time: pd.Timestamp | None = None
+    low_tide_2: float | None = None
+    low_tide_2_time: pd.Timestamp | None = None
     mean_tide_level: float | None = None
 
     def to_dict(self):

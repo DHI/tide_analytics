@@ -5,7 +5,6 @@ import pandas as pd
 from mikeio import DataArray
 import matplotlib.pyplot as plt
 import mikeio
-import tqdm
 from tqdm.autonotebook import tqdm
 from matplotlib.colors import ListedColormap
 from pathlib import Path
@@ -13,7 +12,7 @@ import warnings
 from sklearn.preprocessing import MinMaxScaler
 import dill
 
-from .helpers import *
+from .helpers import TideError, Variable, TidalErrors
 from .tidal_series import TidalSeries
 
 
@@ -51,7 +50,7 @@ class TidalArea:
 
         if isinstance(ignore_error_types, str):
             if ignore_error_types not in ["all_tidal", "all"]:
-                raise ValueError(f"ignore_error_types must be one of ['all_tidal', 'all'] or any TideError.")
+                raise ValueError("ignore_error_types must be one of ['all_tidal', 'all'] or any TideError.")
 
         self.ignore_error_types = ignore_error_types
         self.raise_error_types = raise_error_types
@@ -75,9 +74,6 @@ class TidalArea:
         self.verbose = verbose
         self.save_path_parent_folder = save_path_parent_folder
         self.identifier = identifier
-
-        self.tidal_characteristica = None
-        self.tidal_errors = None
 
         self.surface_elevation, self.current_speed, self.current_direction = self._parse_input(surface_elevation = surface_elevation,
                                                                                                 current_speed = current_speed,
@@ -152,8 +148,6 @@ class TidalArea:
             tidal_errors_sum = self.tidal_errors.sum(axis=0)
             error_rows = tidal_errors_sum.loc[tidal_errors_sum.index.str.contains("Error")]
             tidal_errors_sum.loc["Total Errors"] = error_rows.sum(axis=0)
-            error_rows = tidal_errors_sum.loc[tidal_errors_sum.index.str.contains("Warning")]
-            tidal_errors_sum.loc["Total Warnings"] = error_rows.sum(axis=0)
         if investigated_elements is None:
             investigated_elements = self.surface_elevation.data.geometry.n_elements
 
@@ -161,14 +155,9 @@ class TidalArea:
             "absolute": tidal_errors_sum[tidal_errors_sum.index.str.contains('Error')], 
             "relative": (tidal_errors_sum[tidal_errors_sum.index.str.contains('Error')] / investigated_elements).apply(lambda x: f"{x * 100:.1f} %")
         })                    
-        all_warnings = pd.DataFrame({
-            "absolute": tidal_errors_sum[tidal_errors_sum.index.str.contains('Warning')], 
-            "relative": (tidal_errors_sum[tidal_errors_sum.index.str.contains('Warning')] / investigated_elements).apply(lambda x: f"{x * 100:.1f} %")
-        })                    
         print(f"\nError Overview:\n{all_errors.to_string(header=False)}")
-        print(f"\nWarning Overview:\n{all_warnings.to_string(header=False)}")
 
-        return all_errors, all_warnings
+        return all_errors
 
     def save(self):
 
@@ -328,7 +317,7 @@ class TidalArea:
         present_errors = []  
         for error, color_idx in error_to_color.items():
             if error in self.tidal_errors.columns:
-                idx = np.where(self.tidal_errors[error] == True)
+                idx = np.where(self.tidal_errors[error])
                 if len(idx[0]) > 0:
                     present_errors.append(error)
                     data[idx] = color_idx

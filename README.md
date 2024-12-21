@@ -1,7 +1,10 @@
-# tide_analytics: A python library for analyzing tides from timeseries data.
+# tide_analytics: Template Python repository
 
+This repository serves as a template for creating a Python library
 
 ## How do I use this?
+
+![](images/tide_analytics_logo)
 
 
 ## Additional resources

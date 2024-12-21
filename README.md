@@ -4,7 +4,7 @@ This repository serves as a template for creating a Python library
 
 ## How do I use this?
 
-![](images/tide_analytics_logo.jpeg)
+![](images/tide_analytics_logo.png)
 
 
 ## Additional resources

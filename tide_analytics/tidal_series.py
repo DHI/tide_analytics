@@ -8,7 +8,7 @@ import mikeio
 from sklearn.cluster import DBSCAN
 from scipy.optimize import minimize_scalar
 
-from .helpers import TideError, Tide, TidalErrors, TidalCharacteristics, Variable, NonAlternatingHTLTsError, NoKenterPointsFoundError, CurrentsToNoisyError, NotEnoughTidesError, NoHTLTsFoundError, NonMatchingKenterError, FallsWetError, NotEnoughWaterError, FallsPartiallyDryError, FallsPartiallyWetError
+from .helpers import TideError, Tide, TidalErrors, TidalCharacteristics, Variable, NonAlternatingHWLWsError, NoSlackPointsFoundError, CurrentsToNoisyError, NotEnoughTidesError, NoHWLWsFoundError, NonMatchingSlackError, FallsWetError, NotEnoughWaterError, FallsPartiallyDryError, FallsPartiallyWetError
 
 class TidalSeries:
 
@@ -85,9 +85,9 @@ class TidalSeries:
         This method performs the following tasks:
 
         1. Checks if the if the element falls dry or wet.
-        2. Calculates the high and low tide levels (HTLTs).
-        3. Identifies the kenter values using current speed and direction data.
-        4. Matches the kenter values to the HTLTs.
+        2. Calculates the high and low tide levels (HWLWs).
+        3. Identifies the slack values using current speed and direction data.
+        4. Matches the slack values to the HWLWs.
         5. Calculates the tidal characteristics, such as the tidal range, tidal period,
         and tidal amplitude.
         6. Checks for errors and warnings, and writes them to a dictionary.
@@ -108,22 +108,22 @@ class TidalSeries:
                 self.fallswet = self._fallswet()
                 self.only_SE = False
 
-                self.HTLTs = self.get_HTLTs()
+                self.HWLWs = self.get_HWLWs()
 
                 if self.fallsdry:
-                    self.tides = self.get_tides(self.HTLTs, None)
+                    self.tides = self.get_tides(self.HWLWs, None)
                     self.aggregate_tidal_characteristics(self.tides)
                     raise FallsPartiallyDryError("The element falls partially dry.")
                 if self.fallswet:
-                    self.tides = self.get_tides(self.HTLTs, None)
+                    self.tides = self.get_tides(self.HWLWs, None)
                     self.aggregate_tidal_characteristics(self.tides)
                     raise FallsPartiallyWetError("The element falls partially wet.")
 
-                self.kenter_CS = self.get_kenter_by_CS()
-                self.kenter_CD = self.get_kenter_by_CD()
-                self.kenter = self.match_kenter_to_HTLTs(self.HTLTs, self.kenter_CS, self.kenter_CD)
+                self.slack_CS = self.get_slack_by_CS()
+                self.slack_CD = self.get_slack_by_CD()
+                self.slack = self.match_slack_to_HWLWs(self.HWLWs, self.slack_CS, self.slack_CD)
                 
-                self.tides = self.get_tides(self.HTLTs, self.kenter)
+                self.tides = self.get_tides(self.HWLWs, self.slack)
                 self.tidal_characteristics = self.aggregate_tidal_characteristics(self.tides)
             except self.errors_to_skip as e:
                 all_tide_errors = {name: cls for name, cls in globals().items()
@@ -143,9 +143,9 @@ class TidalSeries:
             f"{textwrap.indent(str(self.tidal_characteristics), '    ')}"
         )
         
-    def get_tides(self, HTLTs, kenter):
+    def get_tides(self, HWLWs, slack):
 
-        tides = self.split_tides(HTLTs, kenter)
+        tides = self.split_tides(HWLWs, slack)
 
         if len(tides) < self.MIN_TIDES:
             raise NotEnoughTidesError(f"A minimum of {self.MIN_TIDES} tides is required. Only {len(tides)} were found.")
@@ -164,7 +164,7 @@ class TidalSeries:
             MAXFCS = tides_df["max_flood_current"].max(),
             MEANECS = tides_df["mean_ebb_current"].mean(),
             MEANFCS = tides_df["mean_flood_current"].mean(),
-            TR = tides_df["tidal_range"].mean(),
+            MTR = tides_df["tidal_range"].mean(),
             ECD = tides_df["ebb_current_duration"].mean(),
             FCD = tides_df["flood_current_duration"].mean(),
             ED = tides_df["ebb_duration"].mean(),
@@ -178,7 +178,7 @@ class TidalSeries:
         below = np.maximum(0, h - surface_elevation).sum()
         return abs(above - below)
 
-    def split_tides(self, HTLTs: pd.DataFrame, kenter: pd.DataFrame):
+    def split_tides(self, HWLWs: pd.DataFrame, slack: pd.DataFrame):
         
         tides = []
 
@@ -186,7 +186,7 @@ class TidalSeries:
 
         if self.fallsdry or self.fallswet:
     
-            for index, high_tide in HTLTs.iterrows():
+            for index, high_tide in HWLWs.iterrows():
 
                 tides.append(Tide(
                     high_tide = high_tide[se],
@@ -195,145 +195,145 @@ class TidalSeries:
 
         elif self.only_SE:
 
-            for (index_1_HTLTs, row_1_HTLTs), (index_2_HTLTs, row_2_HTLTs), (index_3_HTLTs, row_3_HTLTs), in zip(
-                HTLTs.iloc[:-2:2].iterrows(),  
-                HTLTs.iloc[1:-1:2].iterrows(),  
-                HTLTs.iloc[2::2].iterrows(),
+            for (index_1_HWLWs, row_1_HWLWs), (index_2_HWLWs, row_2_HWLWs), (index_3_HWLWs, row_3_HWLWs), in zip(
+                HWLWs.iloc[:-2:2].iterrows(),  
+                HWLWs.iloc[1:-1:2].iterrows(),  
+                HWLWs.iloc[2::2].iterrows(),
                 ):
 
-                se_tide = self.surface_elevation.data.loc[index_1_HTLTs:index_3_HTLTs]
+                se_tide = self.surface_elevation.data.loc[index_1_HWLWs:index_3_HWLWs]
                 mean_tide_level = minimize_scalar(self._imbalance, args=(se_tide.values,)).x
 
                 tides.append(Tide(
-                    ebb_time = [index_2_HTLTs, index_3_HTLTs],
-                    flood_time = [index_1_HTLTs, index_2_HTLTs],
-                    ebb_duration = index_3_HTLTs - index_2_HTLTs,
-                    flood_duration = index_2_HTLTs - index_1_HTLTs,
-                    tidal_range = abs(row_2_HTLTs[se] - 0.5 * (row_3_HTLTs[se] + row_1_HTLTs[se])),
-                    high_tide = row_2_HTLTs[se],
-                    high_tide_time = index_2_HTLTs,
-                    low_tide = row_1_HTLTs[se],
-                    low_tide_time = index_1_HTLTs,
-                    low_tide_2 = row_3_HTLTs[se],
-                    low_tide_2_time = index_3_HTLTs,
+                    ebb_time = [index_2_HWLWs, index_3_HWLWs],
+                    flood_time = [index_1_HWLWs, index_2_HWLWs],
+                    ebb_duration = index_3_HWLWs - index_2_HWLWs,
+                    flood_duration = index_2_HWLWs - index_1_HWLWs,
+                    tidal_range = abs(row_2_HWLWs[se] - 0.5 * (row_3_HWLWs[se] + row_1_HWLWs[se])),
+                    high_tide = row_2_HWLWs[se],
+                    high_tide_time = index_2_HWLWs,
+                    low_tide = row_1_HWLWs[se],
+                    low_tide_time = index_1_HWLWs,
+                    low_tide_2 = row_3_HWLWs[se],
+                    low_tide_2_time = index_3_HWLWs,
                     mean_tide_level = mean_tide_level,
                     ))
 
         else:
-            for (index_1_HTLTs, row_1_HTLTs), (index_2_HTLTs, row_2_HTLTs), (index_3_HTLTs, row_3_HTLTs), (index_1_kenter, row_1_kenter), (index_2_kenter, row_2_kenter), (index_3_kenter, row_3_kenter), in zip(
-                HTLTs.iloc[:-2:2].iterrows(),  
-                HTLTs.iloc[1:-1:2].iterrows(),  
-                HTLTs.iloc[2::2].iterrows(),
-                kenter.iloc[:-2:2].iterrows(),  
-                kenter.iloc[1:-1:2].iterrows(),  
-                kenter.iloc[2::2].iterrows(),
+            for (index_1_HWLWs, row_1_HWLWs), (index_2_HWLWs, row_2_HWLWs), (index_3_HWLWs, row_3_HWLWs), (index_1_slack, row_1_slack), (index_2_slack, row_2_slack), (index_3_slack, row_3_slack), in zip(
+                HWLWs.iloc[:-2:2].iterrows(),  
+                HWLWs.iloc[1:-1:2].iterrows(),  
+                HWLWs.iloc[2::2].iterrows(),
+                slack.iloc[:-2:2].iterrows(),  
+                slack.iloc[1:-1:2].iterrows(),  
+                slack.iloc[2::2].iterrows(),
                 ):
 
-                se_tide = self.surface_elevation.data.loc[index_1_HTLTs:index_3_HTLTs]
+                se_tide = self.surface_elevation.data.loc[index_1_HWLWs:index_3_HWLWs]
                 mean_tide_level = minimize_scalar(self._imbalance, args=(se_tide.values,)).x
                 
                 tides.append(Tide(
-                    ebb_time = [index_2_HTLTs, index_3_HTLTs],
-                    flood_time = [index_1_HTLTs, index_2_HTLTs],
-                    ebb_duration = index_3_HTLTs - index_2_HTLTs,
-                    flood_duration = index_2_HTLTs - index_1_HTLTs,
-                    ebb_current_time = [index_2_kenter, index_3_kenter],
-                    flood_current_time = [index_1_kenter, index_2_kenter],
-                    ebb_current_duration = index_3_kenter - index_2_kenter,
-                    flood_current_duration = index_2_kenter - index_1_kenter,
-                    max_flood_current = float(np.max(self.current_speed.data.loc[index_1_kenter:index_2_kenter])),
-                    max_ebb_current = float(np.max(self.current_speed.data.loc[index_2_kenter:index_3_kenter])),
-                    mean_flood_current = float(np.mean(self.current_speed.data.loc[index_1_kenter:index_2_kenter])),
-                    mean_ebb_current = float(np.mean(self.current_speed.data.loc[index_2_kenter:index_3_kenter])),
-                    tidal_range = abs(row_2_HTLTs[se] - 0.5 * (row_3_HTLTs[se] + row_1_HTLTs[se])),
-                    high_tide = row_2_HTLTs[se],
-                    high_tide_time = index_2_HTLTs,
-                    low_tide = row_1_HTLTs[se],
-                    low_tide_time = index_1_HTLTs,
-                    low_tide_2 = row_3_HTLTs[se],
-                    low_tide_2_time = index_3_HTLTs,
+                    ebb_time = [index_2_HWLWs, index_3_HWLWs],
+                    flood_time = [index_1_HWLWs, index_2_HWLWs],
+                    ebb_duration = index_3_HWLWs - index_2_HWLWs,
+                    flood_duration = index_2_HWLWs - index_1_HWLWs,
+                    ebb_current_time = [index_2_slack, index_3_slack],
+                    flood_current_time = [index_1_slack, index_2_slack],
+                    ebb_current_duration = index_3_slack - index_2_slack,
+                    flood_current_duration = index_2_slack - index_1_slack,
+                    max_flood_current = float(np.max(self.current_speed.data.loc[index_1_slack:index_2_slack])),
+                    max_ebb_current = float(np.max(self.current_speed.data.loc[index_2_slack:index_3_slack])),
+                    mean_flood_current = float(np.mean(self.current_speed.data.loc[index_1_slack:index_2_slack])),
+                    mean_ebb_current = float(np.mean(self.current_speed.data.loc[index_2_slack:index_3_slack])),
+                    tidal_range = abs(row_2_HWLWs[se] - 0.5 * (row_3_HWLWs[se] + row_1_HWLWs[se])),
+                    high_tide = row_2_HWLWs[se],
+                    high_tide_time = index_2_HWLWs,
+                    low_tide = row_1_HWLWs[se],
+                    low_tide_time = index_1_HWLWs,
+                    low_tide_2 = row_3_HWLWs[se],
+                    low_tide_2_time = index_3_HWLWs,
                     mean_tide_level = mean_tide_level,
                     ))
 
         return tides
 
-    def get_HTLTs(self) -> pd.DataFrame:
+    def get_HWLWs(self) -> pd.DataFrame:
         """
-        Calculates the high and low tide levels (HTLTs) from the surface elevation data.
+        Calculates the high and low tide levels (HWLWs) from the surface elevation data.
 
         This method uses the `_find_peaks_troughs` method to identify the peaks and troughs
-        in the surface elevation data, and then calculates the HTLTs based on these peaks
+        in the surface elevation data, and then calculates the HWLWs based on these peaks
         and troughs.
 
         Args:
             None
 
         Returns:
-            pd.DataFrame: A pandas DataFrame containing the HTLTs, including the surface
-                elevation, current speed, and current direction data at each HTLT.
+            pd.DataFrame: A pandas DataFrame containing the HWLWs, including the surface
+                elevation, current speed, and current direction data at each HWLW.
 
         Raises:
-            NoHTLTsFoundError: If no HTLTs are found in the data.
-            NonAlternatingHTLTsError: If the HTLTs are not alternating.
+            NoHWLWsFoundError: If no HWLWs are found in the data.
+            NonAlternatingHWLWsError: If the HWLWs are not alternating.
         """
 
         peaks, troughs = self._find_peaks_troughs(self.surface_elevation.data, time_difference = self.SE_DIF, prominence = self.SE_PROM)
 
         tp = np.concatenate([peaks, troughs])
 
-        HTLTs = pd.DataFrame({
+        HWLWs = pd.DataFrame({
             self.current_speed.data.name: self.current_speed.data.iloc[tp].values,
             self.surface_elevation.data.name: self.surface_elevation.data.iloc[tp].values,
             self.current_direction.data.name: self.current_direction.data.iloc[tp].values
             }, index=self.current_speed.data.iloc[tp].index)
      
-        if HTLTs.empty:
-            raise NoHTLTsFoundError("No HTLTs have been found. Consider changing the SE_* parameters.")
-        if len(HTLTs) < 3:
-            raise NoHTLTsFoundError(f"Only {len(HTLTs)} HTLTs have been found. A Minimum of 3 is required. Consider changing the SE_* parameters.")
+        if HWLWs.empty:
+            raise NoHWLWsFoundError("No HWLWs have been found. Consider changing the SE_* parameters.")
+        if len(HWLWs) < 3:
+            raise NoHWLWsFoundError(f"Only {len(HWLWs)} HWLWs have been found. A Minimum of 3 is required. Consider changing the SE_* parameters.")
         
-        HTLTs["type"] =  np.concatenate([
-            ["HT"] * len(peaks), 
-            ["LT"] * len(troughs)
+        HWLWs["type"] =  np.concatenate([
+            ["HW"] * len(peaks), 
+            ["LW"] * len(troughs)
         ])
 
-        HTLTs = HTLTs.sort_index()
+        HWLWs = HWLWs.sort_index()
 
         if not self.fallsdry and not self.fallswet:
-            if HTLTs['type'].iloc[0] != "LT":
-                HTLTs = HTLTs.iloc[1:]
-            if HTLTs['type'].iloc[-1] != "LT":
-                HTLTs = HTLTs.iloc[:-1]
+            if HWLWs['type'].iloc[0] != "LW":
+                HWLWs = HWLWs.iloc[1:]
+            if HWLWs['type'].iloc[-1] != "LW":
+                HWLWs = HWLWs.iloc[:-1]
 
-        alternates = all(HTLTs['type'].iloc[i] != HTLTs['type'].iloc[i+1] for i in range(len(HTLTs) - 1))
+        alternates = all(HWLWs['type'].iloc[i] != HWLWs['type'].iloc[i+1] for i in range(len(HWLWs) - 1))
         
         if not self.fallsdry and not self.fallswet:
             if not alternates:
-                self.HTLTs = HTLTs
-                raise NonAlternatingHTLTsError("The types are not alternating in the HTLTs DataFrame. This is not supported.")
+                self.HWLWs = HWLWs
+                raise NonAlternatingHWLWsError("The types are not alternating in the HWLWs DataFrame. This is not supported.")
         else:
-            HTLTs = HTLTs[HTLTs["type"] == "HT"]
+            HWLWs = HWLWs[HWLWs["type"] == "HW"]
 
-        return HTLTs
+        return HWLWs
 
-    def get_kenter_by_CS(self):
+    def get_slack_by_CS(self):
         """
-        Calculates the kenter times and types from the current speed.
+        Calculates the slack times and types from the current speed.
 
         This method uses the `_find_peaks_troughs` method to identify the troughs in the current speed data,
-        and calculates the kenter type based on the surface elevation data.
+        and calculates the slack type based on the surface elevation data.
         A DBScan is performed first to check whether the data is noisy or not.
 
         Args:
             None
 
         Returns:
-            pd.DataFrame: A pandas DataFrame containing the kenter times and
+            pd.DataFrame: A pandas DataFrame containing the slack times and
                 types, or None if the element falls dry or wet.
 
         Raises:
             CurrentsToNoisyError: If the current direction data is too noisy to find
-                the kenter.
+                the slack.
         """
         if not self.fallsdry and not self.fallswet:
             data = self.current_direction.data.values.reshape(-1, 1)
@@ -342,40 +342,40 @@ class TidalSeries:
 
             if len(unique_clusters) < 2: 
                 self.only_SE = True
-                self.tides = self.get_tides(self.HTLTs, None)
+                self.tides = self.get_tides(self.HWLWs, None)
                 self.tidal_characteristics = self.aggregate_tidal_characteristics(self.tides)
-                raise CurrentsToNoisyError(f"The current direction data is to noisy to find the kenter. Found {unique_clusters} clusters. {2} clusters are allowed")
+                raise CurrentsToNoisyError(f"The current direction data is to noisy to find the slack. Found {unique_clusters} clusters. {2} clusters are allowed")
 
             _, troughs = self._find_peaks_troughs(self.current_speed.data, time_difference = self.CS_DIF, prominence = self.CS_PROM)
         
-            kenter = pd.DataFrame({
+            slack = pd.DataFrame({
                 self.current_speed.data.name: self.current_speed.data.iloc[troughs].values,
                 self.surface_elevation.data.name: self.surface_elevation.data.iloc[troughs].values,
                 self.current_direction.data.name: self.current_direction.data.iloc[troughs].values
                 }, index=self.current_speed.data.iloc[troughs].index)
 
             mean_se = np.mean(self.surface_elevation.data)
-            kenter["type"] = np.where(
-            kenter[self.surface_elevation.data.name] < mean_se, 
+            slack["type"] = np.where(
+            slack[self.surface_elevation.data.name] < mean_se, 
             "to_flood", 
             "to_ebb")
 
-            kenter = kenter.sort_index()       
+            slack = slack.sort_index()       
 
-            return kenter
+            return slack
 
-    def get_kenter_by_CD(self) -> pd.DataFrame:
+    def get_slack_by_CD(self) -> pd.DataFrame:
         """
-        Calculates the kenter times and types from the current direction.
+        Calculates the slack times and types from the current direction.
 
         This method uses the mean of the current direction data as a threshold to identify the transitions from below to above and vice versa,
-        and calculates the kenter type based on the surface elevation data.
+        and calculates the slack type based on the surface elevation data.
 
         Args:
             None
 
         Returns:
-            pd.DataFrame or None: A pandas DataFrame containing the kenter times and
+            pd.DataFrame or None: A pandas DataFrame containing the slack times and
                 types, or None if the element falls dry or wet.
 
         """
@@ -390,28 +390,28 @@ class TidalSeries:
             
             idcs = self.current_direction.data.index[transitions].unique().tolist()
 
-            kenter = pd.DataFrame({
+            slack = pd.DataFrame({
                 self.current_speed.data.name: self.current_speed.data.loc[idcs].values,
                 self.surface_elevation.data.name: self.surface_elevation.data.loc[idcs].values,
                 self.current_direction.data.name: self.current_direction.data.loc[idcs].values
                 }, index=self.current_speed.data.loc[idcs].index)
 
             mean_se = np.mean(self.surface_elevation.data)
-            kenter["type"] = np.where(
-            kenter[self.surface_elevation.data.name] < mean_se, 
+            slack["type"] = np.where(
+            slack[self.surface_elevation.data.name] < mean_se, 
             "to_flood", 
             "to_ebb")
 
-            kenter = kenter.sort_index()       
+            slack = slack.sort_index()       
 
-            return kenter
+            return slack
 
-    # def get_kenter_by_CD(self):
+    # def get_slack_by_CD(self):
     #     """
-    #     Calculates the kenter times and types from the current direction.
+    #     Calculates the slack times and types from the current direction.
 
     #     This function checks for periods where the current direction is above or below 
-    #     the mean current direction and calculates the respective durations. The kenter 
+    #     the mean current direction and calculates the respective durations. The slack 
     #     points are considered transitions from below to above or above to below the mean 
     #     current direction, and only transitions that meet a minimum duration threshold, 
     #     defined by `CD_DIF`, are considered valid. Based on the surface elevation at each 
@@ -429,7 +429,7 @@ class TidalSeries:
     #         None
 
     #     Returns:
-    #         pd.DataFrame or None: A pandas DataFrame containing the kenter times and
+    #         pd.DataFrame or None: A pandas DataFrame containing the slack times and
     #             types, or None if the element falls dry or wet.
 
     #     """
@@ -452,97 +452,97 @@ class TidalSeries:
 
     #         transitions = pd.concat([above_to_below.to_frame(), below_to_above.to_frame()]).sort_index().index.unique()   
 
-    #         kenter = pd.DataFrame({
+    #         slack = pd.DataFrame({
     #             self.current_speed.data.name: self.current_speed.data.loc[transitions].values,
     #             self.surface_elevation.data.name: self.surface_elevation.data.loc[transitions].values,
     #             self.current_direction.data.name: self.current_direction.data.loc[transitions].values
     #             }, index=self.current_speed.data.loc[transitions].index)
 
     #         mean_se = np.mean(self.surface_elevation.data)
-    #         kenter["type"] = np.where(
-    #         kenter[self.surface_elevation.data.name] < mean_se, 
+    #         slack["type"] = np.where(
+    #         slack[self.surface_elevation.data.name] < mean_se, 
     #         "to_flood", 
     #         "to_ebb")
 
-    #         kenter = kenter.sort_index()       
+    #         slack = slack.sort_index()       
 
-    #     return kenter
+    #     return slack
 
-    def match_kenter_to_HTLTs(self, HTLTs: pd.DataFrame, kenter_CS: pd.DataFrame, kenter_CD: pd.DataFrame):
+    def match_slack_to_HWLWs(self, HWLWs: pd.DataFrame, slack_CS: pd.DataFrame, slack_CD: pd.DataFrame):
         """
-        Matches kenter points to HTLTs based on the order of the indices.
+        Matches slack points to HWLWs based on the order of the indices.
 
-        The kenter points are matched to the HTLTs based on the order of the indices.
+        The slack points are matched to the HWLWs based on the order of the indices.
 
         Args:
-            HTLTs (pd.DataFrame): HTLTs DataFrame containing the high and low tide levels and times.
-            kenter_CS (pd.DataFrame): kenter points DataFrame containing the current speed-based kenter points.
-            kenter_CD (pd.DataFrame): kenter points DataFrame containing the current direction-based kenter points.
+            HWLWs (pd.DataFrame): HWLWs DataFrame containing the high and low tide levels and times.
+            slack_CS (pd.DataFrame): Slack points DataFrame containing the current speed-based slack points.
+            slack_CD (pd.DataFrame): Slack points DataFrame containing the current direction-based slack points.
 
         Returns:
-            pd.DataFrame or None: A pandas DataFrame containing the matched kenter points, or None if the element falls dry or wet.
+            pd.DataFrame or None: A pandas DataFrame containing the matched slack points, or None if the element falls dry or wet.
 
         Raises:
-            NoKenterPointsFoundError: If no kenter points were found.
+            NoslackPointsFoundError: If no slack points were found.
         """
         if not self.fallsdry and not self.fallswet:
-            HTLTs = HTLTs.sort_index()
+            HWLWs = HWLWs.sort_index()
 
-            if kenter_CD.empty and kenter_CS.empty:
-                raise NoKenterPointsFoundError("No kenter points have been found. Consider changing Some parameters.")
+            if slack_CD.empty and slack_CS.empty:
+                raise NoSlackPointsFoundError("No slack points have been found. Consider changing Some parameters.")
 
-            kenter_CS = kenter_CS.sort_index()
-            kenter_CD = kenter_CD.sort_index()
+            slack_CS = slack_CS.sort_index()
+            slack_CD = slack_CD.sort_index()
 
-            assert not HTLTs.isna().any().any(), "HTLTs contains NaN values. This shouldn't be possible."
-            assert not kenter_CS.isna().any().any(), "CS kenter contains NaN values. This shouldn't be possible."
-            assert not kenter_CD.isna().any().any(), "CD kenter contains NaN values. This shouldn't be possible."
+            assert not HWLWs.isna().any().any(), "HWLWs contains NaN values. This shouldn't be possible."
+            assert not slack_CS.isna().any().any(), "CS slack contains NaN values. This shouldn't be possible."
+            assert not slack_CD.isna().any().any(), "CD slack contains NaN values. This shouldn't be possible."
 
-            matched_kenter_CS, sanity_CS = self._match_kenter(kenter_CS, HTLTs)
-            matched_kenter_CD, sanity_CD = self._match_kenter(kenter_CD, HTLTs)
+            matched_slack_CS, sanity_CS = self._match_slack(slack_CS, HWLWs)
+            matched_slack_CD, sanity_CD = self._match_slack(slack_CD, HWLWs)
 
-            matched_kenter = matched_kenter_CS
+            matched_slack = matched_slack_CS
             if sanity_CS:
-                return matched_kenter
+                return matched_slack
             else:
-                matched_kenter = matched_kenter_CD
+                matched_slack = matched_slack_CD
                 if sanity_CD:
-                    return matched_kenter
+                    return matched_slack
                 else:
                     self.only_SE = True
-                    self.tides = self.get_tides(self.HTLTs, None)
+                    self.tides = self.get_tides(self.HWLWs, None)
                     self.tidal_characteristics = self.aggregate_tidal_characteristics(self.tides)
-                    self.kenter = matched_kenter_CD
-                    raise NonMatchingKenterError(f"Kenter points could not be matched to HTLTs. \nlength of kenter: {len(matched_kenter)}\nlength of HTLTs: {len(HTLTs)}\nSanity CS: {sanity_CS}\nSanity CD: {sanity_CD}")
+                    self.slack = matched_slack_CD
+                    raise NonMatchingSlackError(f"slack points could not be matched to HWLWs. \nlength of slack: {len(matched_slack)}\nlength of HWLWs: {len(HWLWs)}\nSanity CS: {sanity_CS}\nSanity CD: {sanity_CD}")
           
-    def _match_kenter(self, kenter: pd.DataFrame, HTLTs: pd.DataFrame):
+    def _match_slack(self, slack: pd.DataFrame, HWLWs: pd.DataFrame):
         """
-        Matches kenter points to HTLTs based on the order of the indices.
+        Matches slack points to HWLWs based on the order of the indices.
 
-        Within a certain tolerance, this method first finds the nearest index in kenter for each index in HTLTs, 
-        and then checks if the resulting matched kenter points have alternating types and the same length as HTLTs.
+        Within a certain tolerance, this method first finds the nearest index in slack for each index in HWLWs, 
+        and then checks if the resulting matched slack points have alternating types and the same length as HWLWs.
 
         Args:
-            kenter (pd.DataFrame): kenter points DataFrame containing the current speed-based kenter points.
-            HTLTs (pd.DataFrame): HTLTs DataFrame containing the high and low tide levels and times.
+            slack (pd.DataFrame): slack points DataFrame containing the current speed-based slack points.
+            HWLWs (pd.DataFrame): HWLWs DataFrame containing the high and low tide levels and times.
 
         Returns:
-            pd.DataFrame or None: A pandas DataFrame containing the matched kenter points, or None if the element falls dry or wet.
-            bool: A boolean indicating whether the matched kenter points are sane, i.e. they have alternating types and the same length as HTLTs.
+            pd.DataFrame or None: A pandas DataFrame containing the matched slack points, or None if the element falls dry or wet.
+            bool: A boolean indicating whether the matched slack points are sane, i.e. they have alternating types and the same length as HWLWs.
         """
-        index = kenter.index
+        index = slack.index
 
-        idcs = index.get_indexer(HTLTs.index.tolist(), method = "nearest", tolerance=self.MATCH_TOL)
+        idcs = index.get_indexer(HWLWs.index.tolist(), method = "nearest", tolerance=self.MATCH_TOL)
         idcs = idcs[idcs != -1] 
         
-        matched_kenter = kenter.iloc[idcs].sort_index()
+        matched_slack = slack.iloc[idcs].sort_index()
         
-        alternates = all(matched_kenter['type'].iloc[i] != matched_kenter['type'].iloc[i+1] for i in range(len(matched_kenter) - 1))
-        same_length = len(matched_kenter) == len(HTLTs)
+        alternates = all(matched_slack['type'].iloc[i] != matched_slack['type'].iloc[i+1] for i in range(len(matched_slack) - 1))
+        same_length = len(matched_slack) == len(HWLWs)
 
         sane = alternates and same_length
 
-        return matched_kenter, sane
+        return matched_slack, sane
 
     def exclude_warmup(self, surface_elevation: Variable, current_speed: Variable, current_direction: Variable) -> tuple[Variable, Variable, Variable]:
         """
@@ -594,8 +594,8 @@ class TidalSeries:
             fig.savefig("timeseries.png", dpi=300)
 
     def plot_surface_elevation(self, ax = None,
-                                plot_HTLTs: bool = True,
-                                plot_kenter: bool = False, 
+                                plot_HWLWs: bool = True,
+                                plot_slack: bool = False, 
                                 plot_tidal_range: bool = True,
                                 plot_tide_phase: bool = True,
                                 plot_mean_tide_level: bool = True,
@@ -647,37 +647,37 @@ class TidalSeries:
                         else:
                             ax.hlines(y=tide.mean_tide_level, xmin=tide.low_tide_time, xmax=tide.low_tide_2_time, linewidth=0.7, color='grey', linestyle="dashed")
 
-        if plot_HTLTs:
-            if hasattr(self, "HTLTs"):
-                for index, HTLT in self.HTLTs.iterrows():
-                    if HTLT["type"] == "HT":
+        if plot_HWLWs:
+            if hasattr(self, "HWLWs"):
+                for index, HWLW in self.HWLWs.iterrows():
+                    if HWLW["type"] == "HW":
                         label = "Thw"
                         if label not in legend_handles:
-                            legend_handles[label] = ax.plot(index, HTLT[self.surface_elevation.data.name], marker="^", color="red", alpha=0.7, linestyle='None', label=label)
+                            legend_handles[label] = ax.plot(index, HWLW[self.surface_elevation.data.name], marker="^", color="red", alpha=0.7, linestyle='None', label=label)
                         else:
-                            ax.plot(index, HTLT[self.surface_elevation.data.name], marker="^", color="red", alpha=0.7, linestyle='None')
-                    if HTLT["type"] == "LT":
+                            ax.plot(index, HWLW[self.surface_elevation.data.name], marker="^", color="red", alpha=0.7, linestyle='None')
+                    if HWLW["type"] == "LW":
                         label = "Tnw"
                         if label not in legend_handles:
-                            legend_handles[label] = ax.plot(index, HTLT[self.surface_elevation.data.name], marker="v", color="green", alpha=0.7, linestyle='None', label=label)
+                            legend_handles[label] = ax.plot(index, HWLW[self.surface_elevation.data.name], marker="v", color="green", alpha=0.7, linestyle='None', label=label)
                         else:
-                            ax.plot(index, HTLT[self.surface_elevation.data.name], marker="v", color="green", alpha=0.7, linestyle='None')
+                            ax.plot(index, HWLW[self.surface_elevation.data.name], marker="v", color="green", alpha=0.7, linestyle='None')
 
-        if plot_kenter:
-            if hasattr(self, "kenter"):
-                for index, kenter in self.kenter.iterrows():
-                    if kenter["type"] == "to_flood":
+        if plot_slack:
+            if hasattr(self, "slack"):
+                for index, slack in self.slack.iterrows():
+                    if slack["type"] == "to_flood":
                         label = "Ke"
                         if label not in legend_handles:
-                            legend_handles[label] = ax.plot(index, kenter[self.surface_elevation.data.name], marker="v", markerfacecolor="none", markeredgecolor="green", alpha=0.7, linestyle='None', label=label)
+                            legend_handles[label] = ax.plot(index, slack[self.surface_elevation.data.name], marker="v", markerfacecolor="none", markeredgecolor="green", alpha=0.7, linestyle='None', label=label)
                         else:
-                            ax.plot(index, kenter[self.surface_elevation.data.name], marker="v", markerfacecolor="none", markeredgecolor="green", alpha=0.7, linestyle='None')
-                    if kenter["type"] == "to_ebb":
+                            ax.plot(index, slack[self.surface_elevation.data.name], marker="v", markerfacecolor="none", markeredgecolor="green", alpha=0.7, linestyle='None')
+                    if slack["type"] == "to_ebb":
                         label = "Kf"
                         if label not in legend_handles:
-                            legend_handles[label] = ax.plot(index, kenter[self.surface_elevation.data.name], marker="^", markerfacecolor="none", markeredgecolor="red", alpha=0.7, linestyle='None', label=label)
+                            legend_handles[label] = ax.plot(index, slack[self.surface_elevation.data.name], marker="^", markerfacecolor="none", markeredgecolor="red", alpha=0.7, linestyle='None', label=label)
                         else:
-                            ax.plot(index, kenter[self.surface_elevation.data.name], marker="^", markerfacecolor="none", markeredgecolor="red", alpha=0.7, linestyle='None')
+                            ax.plot(index, slack[self.surface_elevation.data.name], marker="^", markerfacecolor="none", markeredgecolor="red", alpha=0.7, linestyle='None')
 
         handles, labels = ax.get_legend_handles_labels()
         by_label = dict(zip(labels, handles))
@@ -688,8 +688,8 @@ class TidalSeries:
 
 
     def plot_current_direction(self, ax = None,
-                               plot_kenter: bool = True, 
-                               plot_HTLTs: bool = False, 
+                               plot_slack: bool = True, 
+                               plot_HWLWs: bool = False, 
                                plot_tide_current_phase: bool = True, 
                                plot_mean_current_direction: bool = True,
                                figsize = None) -> None:
@@ -726,37 +726,37 @@ class TidalSeries:
                             # ax.axvspan(tide.flood_current_time[0], tide.flood_current_time[1], alpha=0.07, color='red')
                             ax.hlines(y = y_min, xmin = tide.flood_current_time[0], xmax = tide.flood_current_time[1], linewidth=5, alpha=0.4, color='red', label=label)
         
-        if plot_kenter:
-            if hasattr(self, "kenter"):
-                for index, kenter in self.kenter.iterrows():
-                    if kenter["type"] == "to_flood":
+        if plot_slack:
+            if hasattr(self, "slack"):
+                for index, slack in self.slack.iterrows():
+                    if slack["type"] == "to_flood":
                         label = "Ke"
                         if label not in legend_handles:
-                            legend_handles[label] = ax.plot(index, kenter[self.current_direction.data.name], marker="v", markerfacecolor="none", markeredgecolor="green", alpha=0.7, linestyle='None', label=label)
+                            legend_handles[label] = ax.plot(index, slack[self.current_direction.data.name], marker="v", markerfacecolor="none", markeredgecolor="green", alpha=0.7, linestyle='None', label=label)
                         else:
-                            ax.plot(index, kenter[self.current_direction.data.name], marker="v", markerfacecolor="none", markeredgecolor="green", alpha=0.7, linestyle='None')
-                    if kenter["type"] == "to_ebb":
+                            ax.plot(index, slack[self.current_direction.data.name], marker="v", markerfacecolor="none", markeredgecolor="green", alpha=0.7, linestyle='None')
+                    if slack["type"] == "to_ebb":
                         label = "Kf"
                         if label not in legend_handles:
-                            legend_handles[label] = ax.plot(index, kenter[self.current_direction.data.name], marker="^", markerfacecolor="none", markeredgecolor="red", alpha=0.7, linestyle='None', label=label)
+                            legend_handles[label] = ax.plot(index, slack[self.current_direction.data.name], marker="^", markerfacecolor="none", markeredgecolor="red", alpha=0.7, linestyle='None', label=label)
                         else:
-                            ax.plot(index, kenter[self.current_direction.data.name], marker="^", markerfacecolor="none", markeredgecolor="red", alpha=0.7, linestyle='None')
+                            ax.plot(index, slack[self.current_direction.data.name], marker="^", markerfacecolor="none", markeredgecolor="red", alpha=0.7, linestyle='None')
 
-        if plot_HTLTs:
-            if hasattr(self, "HTLTs"):
-                for index, HTLT in self.HTLTs.iterrows():
-                    if HTLT["type"] == "HT":
+        if plot_HWLWs:
+            if hasattr(self, "HWLWs"):
+                for index, HWLW in self.HWLWs.iterrows():
+                    if HWLW["type"] == "HW":
                         label = "Thw"
                         if label not in legend_handles:
-                            legend_handles[label] = ax.plot(index, HTLT[self.current_direction.data.name], marker="^", color="red", alpha=0.7, linestyle='None', label=label)
+                            legend_handles[label] = ax.plot(index, HWLW[self.current_direction.data.name], marker="^", color="red", alpha=0.7, linestyle='None', label=label)
                         else:
-                            ax.plot(index, HTLT[self.current_direction.data.name], marker="^", color="red", alpha=0.7, linestyle='None')
-                    if HTLT["type"] == "LT":
+                            ax.plot(index, HWLW[self.current_direction.data.name], marker="^", color="red", alpha=0.7, linestyle='None')
+                    if HWLW["type"] == "LW":
                         label = "Tnw"
                         if label not in legend_handles:
-                            legend_handles[label] = ax.plot(index, HTLT[self.current_direction.data.name], marker="v", color="green", alpha=0.7, linestyle='None', label=label)
+                            legend_handles[label] = ax.plot(index, HWLW[self.current_direction.data.name], marker="v", color="green", alpha=0.7, linestyle='None', label=label)
                         else:
-                            ax.plot(index, HTLT[self.current_direction.data.name], marker="v", color="green", alpha=0.7, linestyle='None')
+                            ax.plot(index, HWLW[self.current_direction.data.name], marker="v", color="green", alpha=0.7, linestyle='None')
 
         handles, labels = ax.get_legend_handles_labels()
         by_label = dict(zip(labels, handles))
@@ -766,8 +766,8 @@ class TidalSeries:
             plt.show()
 
     def plot_current_speed(self, ax = None,
-                           plot_kenter: bool = True, 
-                           plot_HTLTs: bool = False, 
+                           plot_slack: bool = True, 
+                           plot_HWLWs: bool = False, 
                            plot_current_characteristics: bool = True, 
                            plot_tide_current_phase: bool = True, 
                            figsize = None) -> None:
@@ -825,37 +825,37 @@ class TidalSeries:
                         else:
                             ax.hlines(y=tide.mean_ebb_current, xmin=tide.high_tide_time, xmax=tide.low_tide_2_time, alpha=0.5, linewidth=0.7, color='green', linestyle="dashed")
 
-        if plot_kenter:
-            if hasattr(self, "kenter"):
-                for index, kenter in self.kenter.iterrows():
-                    if kenter["type"] == "to_flood":
+        if plot_slack:
+            if hasattr(self, "slack"):
+                for index, slack in self.slack.iterrows():
+                    if slack["type"] == "to_flood":
                         label = "Ke"
                         if label not in legend_handles:
-                            legend_handles[label] = ax.plot(index, kenter[self.current_speed.data.name], marker="v", markerfacecolor="none", markeredgecolor="green", alpha=0.7, linestyle='None', label=label)
+                            legend_handles[label] = ax.plot(index, slack[self.current_speed.data.name], marker="v", markerfacecolor="none", markeredgecolor="green", alpha=0.7, linestyle='None', label=label)
                         else:
-                            ax.plot(index, kenter[self.current_speed.data.name], marker="v", markerfacecolor="none", markeredgecolor="green", alpha=0.7, linestyle='None')
-                    if kenter["type"] == "to_ebb":
+                            ax.plot(index, slack[self.current_speed.data.name], marker="v", markerfacecolor="none", markeredgecolor="green", alpha=0.7, linestyle='None')
+                    if slack["type"] == "to_ebb":
                         label = "Kf"
                         if label not in legend_handles:
-                            legend_handles[label] = ax.plot(index, kenter[self.current_speed.data.name], marker="^", markerfacecolor="none", markeredgecolor="red", alpha=0.7, linestyle='None', label=label)
+                            legend_handles[label] = ax.plot(index, slack[self.current_speed.data.name], marker="^", markerfacecolor="none", markeredgecolor="red", alpha=0.7, linestyle='None', label=label)
                         else:
-                            ax.plot(index, kenter[self.current_speed.data.name], marker="^", markerfacecolor="none", markeredgecolor="red", alpha=0.7, linestyle='None')
+                            ax.plot(index, slack[self.current_speed.data.name], marker="^", markerfacecolor="none", markeredgecolor="red", alpha=0.7, linestyle='None')
 
-        if plot_HTLTs:
-            if hasattr(self, "HTLTs"):
-                for index, HTLT in self.HTLTs.iterrows():
-                    if HTLT["type"] == "HT":
+        if plot_HWLWs:
+            if hasattr(self, "HWLWs"):
+                for index, HWLW in self.HWLWs.iterrows():
+                    if HWLW["type"] == "HW":
                         label = "Thw"
                         if label not in legend_handles:
-                            legend_handles[label] = ax.plot(index, HTLT[self.current_speed.data.name], marker="^", color="red", alpha=0.7, linestyle='None', label=label)
+                            legend_handles[label] = ax.plot(index, HWLW[self.current_speed.data.name], marker="^", color="red", alpha=0.7, linestyle='None', label=label)
                         else:
-                            ax.plot(index, HTLT[self.current_speed.data.name], marker="^", color="red", alpha=0.7, linestyle='None')
-                    if HTLT["type"] == "LT":
+                            ax.plot(index, HWLW[self.current_speed.data.name], marker="^", color="red", alpha=0.7, linestyle='None')
+                    if HWLW["type"] == "LW":
                         label = "Tnw"
                         if label not in legend_handles:
-                            legend_handles[label] = ax.plot(index, HTLT[self.current_speed.data.name], marker="v", color="green", alpha=0.7, linestyle='None', label=label)
+                            legend_handles[label] = ax.plot(index, HWLW[self.current_speed.data.name], marker="v", color="green", alpha=0.7, linestyle='None', label=label)
                         else:
-                            ax.plot(index, HTLT[self.current_speed.data.name], marker="v", color="green", alpha=0.7, linestyle='None')
+                            ax.plot(index, HWLW[self.current_speed.data.name], marker="v", color="green", alpha=0.7, linestyle='None')
 
         handles, labels = ax.get_legend_handles_labels()
         by_label = dict(zip(labels, handles))

@@ -1,16 +1,36 @@
-# tide_analytics: Template Python repository
+## Tide Analytics
 
-This repository serves as a template for creating a Python library
+<div style="display: flex; align-items: center; gap: 10px;">
+  <div>
+    <img src="images/tide_analytics_logo.png" alt="Tide Analytics Logo" style="width: 75%; max-width: 200px;">
+  </div>
+  <div style="font-family: Arial, sans-serif; font-size: 22px; line-height: 1.4;">
+    A Python tool for analyzing tidal characteristics from time series data
+  </div>
+</div>
 
-## How do I use this?
+## How is it used?
 
-![](images/tide_analytics_logo.png)
+## Which tide characteristics are calculated?
+
+| Abbreviation | Description              |
+|--------------|--------------------------|
+| MLW          | Mean Low Water           |
+| MHW          | Mean High Water          |
+| MTR          | Mean Tidal Range         |
+| MTL          | Mean Tide Level          |
+| ED           | Ebb Duration             |
+| FD           | Flood Duration           |
+| ESW          | Ebb Slack Water          |
+| FSW          | Flood Slack Water        |
+| MEANECS      | Mean Ebb Current Speed        |
+| MEANFCS      | Mean Flood Current Speed      |
+| MAXECD       | Max Ebb Current Duration     |
+| MAXFCD       | Max Flood Current Duration   |
 
 
-## Additional resources
+## What next?
 
-If you're interested in learning more about best practices for developing Python packages, check out the following resources:
+## Methods and resources
 
-- [Python Package Development at DHI](https://dhi.github.io/python-package-development/)
-- [Scientific Python Library Development Guide](https://learn.scientific-python.org/development/)
-s
+

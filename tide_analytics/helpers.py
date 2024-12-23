@@ -4,19 +4,19 @@ import mikeio
 
 class TideError(Exception): 
     pass
-class NonAlternatingHTLTsError(TideError): 
+class NonAlternatingHWLWsError(TideError): 
     pass
 class NotEnoughTidesError(TideError): 
     pass
 class NotEnoughWaterError(TideError): 
     pass
-class NoKenterPointsFoundError(TideError): 
+class NoSlackPointsFoundError(TideError): 
     pass
-class NoHTLTsFoundError(TideError): 
+class NoHWLWsFoundError(TideError): 
     pass
 class CurrentsToNoisyError(TideError): 
     pass
-class NonMatchingKenterError(TideError): 
+class NonMatchingSlackError(TideError): 
     pass
 class FallsWetError(TideError): 
     pass
@@ -30,11 +30,11 @@ class TidalErrors:
     FallsPartiallyDryError: bool = False
     FallsPartiallyWetError: bool = False
     FallsWetError: bool = False
-    NonAlternatingHTLTsError: bool = False
+    NonAlternatingHWLWsError: bool = False
     NotEnoughWaterError: bool = False
     NotEnoughTidesError: bool = False
-    NoKenterPointsFound: bool = False
-    NonMatchingKenterError: bool = False
+    NoSlackPointsFound: bool = False
+    NonMatchingSlackError: bool = False
     CurrentsToNoisyError: bool = False
     UnknownError: bool = False
     
@@ -53,7 +53,7 @@ class TidalErrors:
 class TidalCharacteristics:
     MHW: float | None = None
     MLW: float | None = None
-    TR: float | None = None
+    MTR: float | None = None
     MTL: float | None = None
     ECD: pd.Timedelta | None = None
     FCD: pd.Timedelta | None = None
@@ -78,11 +78,12 @@ class TidalCharacteristics:
         attributes = [
             f"MHW: {format_float(self.MHW)}",
             f"MLW: {format_float(self.MLW)}",
-            f"TR: {format_float(self.TR)}",
-            f"ECD: {format_timedelta(self.ECD)}",
-            f"FCD: {format_timedelta(self.FCD)}",
+            f"MTR: {format_float(self.MTR)}",
+            f"MTL: {format_float(self.MTL)}",
             f"ED: {format_timedelta(self.ED)}",
             f"FD: {format_timedelta(self.FD)}",
+            f"ECD: {format_timedelta(self.ECD)}",
+            f"FCD: {format_timedelta(self.FCD)}",
             f"MAXECS: {format_float(self.MAXECS)}",
             f"MAXFCS: {format_float(self.MAXFCS)}",
             f"MEANECS: {format_float(self.MEANECS)}",

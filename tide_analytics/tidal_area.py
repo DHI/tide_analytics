@@ -179,9 +179,13 @@ class TidalArea:
         dataset_data.append(DataArray(data, time=str(self.surface_elevation.data.time.mean()), 
                 item=ItemInfo("MLW", EUMType.Surface_Elevation, EUMUnit.meter), 
                 geometry=self.surface_elevation.data.geometry))
-        data = self.tidal_characteristica["TR"].values
+        data = self.tidal_characteristica["MTL"].values
         dataset_data.append(DataArray(data, time=str(self.surface_elevation.data.time.mean()), 
-                item=ItemInfo("TR", EUMType.Surface_Elevation, EUMUnit.meter), 
+                item=ItemInfo("MTL", EUMType.Surface_Elevation, EUMUnit.meter), 
+                geometry=self.surface_elevation.data.geometry))
+        data = self.tidal_characteristica["MTR"].values
+        dataset_data.append(DataArray(data, time=str(self.surface_elevation.data.time.mean()), 
+                item=ItemInfo("MTR", EUMType.Surface_Elevation, EUMUnit.meter), 
                 geometry=self.surface_elevation.data.geometry))
         data = self.tidal_characteristica["MAXECS"].values
         dataset_data.append(DataArray(data, time=str(self.surface_elevation.data.time.mean()), 

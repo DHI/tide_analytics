@@ -22,6 +22,8 @@ dependencies = [
     "scikit-learn",
     "matplotlib",
     "scipy",
+    "pyarrow",
+    "dill",
 ]
 
 authors = [

@@ -137,8 +137,10 @@ class TidalArea:
             THRSLD_WET_WARNING=self.THRSLD_WET_WARNING,
             TOL_WET_ERROR=self.TOL_WET_ERROR,
             MIN_DATA = self.MIN_DATA,
+            DBSCAN_EPS = self.DBSCAN_EPS,
+            DBSCAN_MINSAMPLES = self.DBSCAN_MINSAMPLES,
             ignore_error_types = self.ignore_error_types,
-            raise_error_types= self.raise_error_types,
+            raise_error_types = self.raise_error_types,
             error_support = error_support)
         
         return out
@@ -165,8 +167,52 @@ class TidalArea:
             if self.save_path_parent_folder is not None:
                 self.save_path_parent_folder.mkdir(parents=True, exist_ok=True)
             self.save_dill(self.save_path_parent_folder / f"{self.identifier}.dill")
+            self.save_dataframe(self.tidal_characteristica, path = self.save_path_parent_folder / f"tidal_characteristics_{self.identifier}.parquet")
+            self.save_dataframe(self.tidal_errors, path = self.save_path_parent_folder / f"tidal_errors_{self.identifier}.parquet")
             self.save_dfsu(self.save_path_parent_folder / f"{self.identifier}.dfsu")
+
+    def save_dataframe(self, df: pd.DataFrame, path: Path):
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        if not path.suffix:
+            path = path.with_suffix('.parquet')
     
+        if path.suffix != '.parquet':
+            warnings.warn(f"File suffix changed from {path.suffix} to .parquet.")
+            path = path.with_suffix('.parquet')
+
+        df.to_parquet(path)
+
+    def save_dfsu(self, path: Path):
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        if not path.suffix:
+            path = path.with_suffix('.dfsu')
+    
+        if path.suffix != '.dfsu':
+            warnings.warn(f"File suffix changed from {path.suffix} to .dfsu.")
+            path = path.with_suffix('.dfsu')
+
+        ds = self.create_output_dataset()
+
+        ds.to_dfs(path)
+        
+    def save_dill(self, path: Path):
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        if not path.suffix:
+            path = path.with_suffix('.dill')
+    
+        if path.suffix != '.dill':
+            warnings.warn(f"File suffix changed from {path.suffix} to .dill.")
+            path = path.with_suffix('.dill')
+
+        with open(path, 'wb') as f:
+            dill.dump(self, f)
+            
     def create_output_dataset(self):
 
         dataset_data = []
@@ -224,34 +270,6 @@ class TidalArea:
 
         return ds
 
-    def save_dfsu(self, path: Path):
-
-        path.parent.mkdir(parents=True, exist_ok=True)
-
-        if not path.suffix:
-            path = path.with_suffix('.dfsu')
-    
-        if path.suffix != '.dfsu':
-            warnings.warn(f"File suffix changed from {path.suffix} to .dfsu.")
-            path = path.with_suffix('.dfsu')
-
-        ds = self.create_output_dataset()
-
-        ds.to_dfs(path)
-        
-    def save_dill(self, path: Path):
-
-        path.parent.mkdir(parents=True, exist_ok=True)
-
-        if not path.suffix:
-            path = path.with_suffix('.dill')
-    
-        if path.suffix != '.dill':
-            warnings.warn(f"File suffix changed from {path.suffix} to .dill.")
-            path = path.with_suffix('.dill')
-
-        with open(path, 'wb') as f:
-            dill.dump(self, f)
         
     def _parse_input(self, surface_elevation: mikeio.DataArray, 
                     current_speed: mikeio.DataArray | None = None, 
@@ -367,7 +385,7 @@ class TidalArea:
 
         df = self.tidal_characteristica.copy()
 
-        float_cols = ["MHW", "MLW", "TR", "MTL", "MAXECS", "MAXFCS", "MEANECS", "MEANFCS"]
+        float_cols = ["MHW", "MLW", "MTR", "MTL", "MAXECS", "MAXFCS", "MEANECS", "MEANFCS"]
         timedelta_cols = ["ECD", "FCD", "ED", "FD"]
         df = df[float_cols + timedelta_cols]
 

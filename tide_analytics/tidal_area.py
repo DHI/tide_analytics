@@ -81,7 +81,7 @@ class TidalArea:
                                                                                                 velocity_x = velocity_x,
                                                                                                 velocity_y = velocity_y)
 
-        self.tidal_characteristica, self.tidal_errors = self.tidal_analysis()
+        self.tidal_characteristics, self.tidal_errors = self.tidal_analysis()
 
         if self.verbose:
             self.error_support_prompt()
@@ -117,10 +117,10 @@ class TidalArea:
                     raise e
                 skipped_errors += 1
         
-        tidal_characteristica  = pd.DataFrame(tidal_characteristics_list).set_index('element')
+        tidal_characteristics  = pd.DataFrame(tidal_characteristics_list).set_index('element')
         tidal_errors = pd.DataFrame(tidal_errors_list).set_index('element')
 
-        return tidal_characteristica, tidal_errors
+        return tidal_characteristics, tidal_errors
     
     def tidal_analysis_series(self, element_se, element_cs, element_cd, error_support) -> TidalSeries:
         out = TidalSeries(surface_elevation=element_se,
@@ -167,7 +167,7 @@ class TidalArea:
             if self.save_path_parent_folder is not None:
                 self.save_path_parent_folder.mkdir(parents=True, exist_ok=True)
             self.save_dill(self.save_path_parent_folder / f"{self.identifier}.dill")
-            self.save_dataframe(self.tidal_characteristica, path = self.save_path_parent_folder / f"tidal_characteristics_{self.identifier}.parquet")
+            self.save_dataframe(self.tidal_characteristics, path = self.save_path_parent_folder / f"tidal_characteristics_{self.identifier}.parquet")
             self.save_dataframe(self.tidal_errors, path = self.save_path_parent_folder / f"tidal_errors_{self.identifier}.parquet")
             self.save_dfsu(self.save_path_parent_folder / f"{self.identifier}.dfsu")
 
@@ -217,51 +217,51 @@ class TidalArea:
 
         dataset_data = []
 
-        data = self.tidal_characteristica["MHW"].values
+        data = self.tidal_characteristics["MHW"].values
         dataset_data.append(DataArray(data, time=str(self.surface_elevation.data.time.mean()), 
                 item=ItemInfo("MHW", EUMType.Surface_Elevation, EUMUnit.meter), 
                 geometry=self.surface_elevation.data.geometry))
-        data = self.tidal_characteristica["MLW"].values
+        data = self.tidal_characteristics["MLW"].values
         dataset_data.append(DataArray(data, time=str(self.surface_elevation.data.time.mean()), 
                 item=ItemInfo("MLW", EUMType.Surface_Elevation, EUMUnit.meter), 
                 geometry=self.surface_elevation.data.geometry))
-        data = self.tidal_characteristica["MTL"].values
+        data = self.tidal_characteristics["MTL"].values
         dataset_data.append(DataArray(data, time=str(self.surface_elevation.data.time.mean()), 
                 item=ItemInfo("MTL", EUMType.Surface_Elevation, EUMUnit.meter), 
                 geometry=self.surface_elevation.data.geometry))
-        data = self.tidal_characteristica["MTR"].values
+        data = self.tidal_characteristics["MTR"].values
         dataset_data.append(DataArray(data, time=str(self.surface_elevation.data.time.mean()), 
                 item=ItemInfo("MTR", EUMType.Surface_Elevation, EUMUnit.meter), 
                 geometry=self.surface_elevation.data.geometry))
-        data = self.tidal_characteristica["MAXECS"].values
+        data = self.tidal_characteristics["MAXECS"].values
         dataset_data.append(DataArray(data, time=str(self.surface_elevation.data.time.mean()), 
                 item=ItemInfo("MAXECS", EUMType.Current_Speed, EUMUnit.meter_per_sec), 
                 geometry=self.surface_elevation.data.geometry))
-        data = self.tidal_characteristica["MAXFCS"].values
+        data = self.tidal_characteristics["MAXFCS"].values
         dataset_data.append(DataArray(data, time=str(self.surface_elevation.data.time.mean()), 
                 item=ItemInfo("MAXFCS", EUMType.Current_Speed, EUMUnit.meter_per_sec), 
                 geometry=self.surface_elevation.data.geometry))
-        data = self.tidal_characteristica["MEANECS"].values
+        data = self.tidal_characteristics["MEANECS"].values
         dataset_data.append(DataArray(data, time=str(self.surface_elevation.data.time.mean()), 
                 item=ItemInfo("MEANECS", EUMType.Current_Speed, EUMUnit.meter_per_sec), 
                 geometry=self.surface_elevation.data.geometry))
-        data = self.tidal_characteristica["MEANFCS"].values
+        data = self.tidal_characteristics["MEANFCS"].values
         dataset_data.append(DataArray(data, time=str(self.surface_elevation.data.time.mean()), 
                 item=ItemInfo("MEANFCS", EUMType.Current_Speed, EUMUnit.meter_per_sec), 
                 geometry=self.surface_elevation.data.geometry))
-        data = np.array([td.total_seconds() / 3600 for td in self.tidal_characteristica["ED"]])
+        data = np.array([td.total_seconds() / 3600 for td in self.tidal_characteristics["ED"]])
         dataset_data.append(DataArray(data, time=str(self.surface_elevation.data.time.mean()), 
                 item=ItemInfo("ED", EUMType.Time, EUMUnit.hour), 
                 geometry=self.surface_elevation.data.geometry))
-        data = np.array([td.total_seconds() / 3600 for td in self.tidal_characteristica["FD"]])
+        data = np.array([td.total_seconds() / 3600 for td in self.tidal_characteristics["FD"]])
         dataset_data.append(DataArray(data, time=str(self.surface_elevation.data.time.mean()), 
                 item=ItemInfo("FD", EUMType.Time, EUMUnit.hour), 
                 geometry=self.surface_elevation.data.geometry))
-        data = np.array([td.total_seconds() / 3600 for td in self.tidal_characteristica["ECD"]])
+        data = np.array([td.total_seconds() / 3600 for td in self.tidal_characteristics["ECD"]])
         dataset_data.append(DataArray(data, time=str(self.surface_elevation.data.time.mean()), 
                 item=ItemInfo("ECD", EUMType.Time, EUMUnit.hour), 
                 geometry=self.surface_elevation.data.geometry))
-        data = np.array([td.total_seconds() / 3600 for td in self.tidal_characteristica["FCD"]])
+        data = np.array([td.total_seconds() / 3600 for td in self.tidal_characteristics["FCD"]])
         dataset_data.append(DataArray(data, time=str(self.surface_elevation.data.time.mean()), 
                 item=ItemInfo("FCD", EUMType.Time, EUMUnit.hour), 
                 geometry=self.surface_elevation.data.geometry))
@@ -383,7 +383,7 @@ class TidalArea:
 
     def plot_statistical_summary(self, figsize: tuple[float, float] = (16,6)):
 
-        df = self.tidal_characteristica.copy()
+        df = self.tidal_characteristics.copy()
 
         float_cols = ["MHW", "MLW", "MTR", "MTL", "MAXECS", "MAXFCS", "MEANECS", "MEANFCS"]
         timedelta_cols = ["ECD", "FCD", "ED", "FD"]

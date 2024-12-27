@@ -8,7 +8,10 @@ import mikeio
 from sklearn.cluster import DBSCAN
 from scipy.optimize import minimize_scalar
 
-from .helpers import TideError, Tide, TidalErrors, TidalCharacteristics, Variable, NonAlternatingHWLWsError, NoSlackPointsFoundError, CurrentsToNoisyError, NotEnoughTidesError, NoHWLWsFoundError, NonMatchingSlackError, FallsWetError, NotEnoughWaterError, FallsPartiallyDryError, FallsPartiallyWetError
+from .helpers import TideError, Tide, TidalErrors, TidalCharacteristics, Variable, \
+    NonAlternatingHWLWsError, NoSlackPointsFoundError, CurrentsToNoisyError, \
+    NotEnoughTidesError, NoHWLWsFoundError, NonMatchingSlackError, \
+    FallsWetError, NotEnoughWaterError, FallsPartiallyDryError, FallsPartiallyWetError
 
 class TidalSeries:
 

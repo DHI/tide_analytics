@@ -579,17 +579,17 @@ class TidalSeries:
         ax1.plot(self.surface_elevation.data.index, self.surface_elevation.data.values)
         self.plot_surface_elevation(ax=ax1)
         # ax1.set_ylabel(self._label_txt(data = self.surface_elevation))
-        ax1.set_ylabel("Wasserstand [mNHN]")
+        ax1.set_ylabel("Surface Elevation [m]")
 
         ax2.plot(self.current_speed.data.index, self.current_speed.data.values)
         self.plot_current_speed(ax=ax2)
         # ax2.set_ylabel(self._label_txt(data = self.current_speed))
-        ax2.set_ylabel("Strömungsgeschw. [m/s]")
+        ax2.set_ylabel("Current Speed [m/s]")
 
         ax3.plot(self.current_direction.data.index, self.current_direction.data.values)
         self.plot_current_direction(ax=ax3)
         # ax3.set_ylabel(self._label_txt(data = self.current_direction))
-        ax3.set_ylabel("Strömungsrichtung [°]")
+        ax3.set_ylabel("Current Direction [°]")
 
         fig.autofmt_xdate()
         if save:

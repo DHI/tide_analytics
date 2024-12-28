@@ -615,6 +615,7 @@ class TidalSeries:
                 for tide in self.tides:
                     if tide.ebb_time is not None:
                         label = "Te"
+                        label = "ED"
                         if label not in legend_handles:
                             # legend_handles[label] = ax.axvspan(tide.ebb_time[0], tide.ebb_time[1], alpha=0.07, color='green', label=label)
                             legend_handles[label] = ax.hlines(y = y_min, xmin = tide.ebb_time[0], xmax = tide.ebb_time[1], linewidth=5, alpha=0.4, color='green', label=label)
@@ -623,6 +624,7 @@ class TidalSeries:
                             ax.hlines(y = y_min, xmin = tide.ebb_time[0], xmax = tide.ebb_time[1], linewidth=5, alpha=0.4, color='green', label=label)
                     if tide.flood_time is not None:
                         label = "Tf"
+                        label = "FD"
                         if label not in legend_handles:
                             # legend_handles[label] = ax.axvspan(tide.flood_time[0], tide.flood_time[1], alpha=0.07, color='red', label=label)
                             legend_handles[label] = ax.hlines(y = y_min, xmin = tide.flood_time[0], xmax = tide.flood_time[1], linewidth=5, alpha=0.4, color='red', label=label)
@@ -632,7 +634,7 @@ class TidalSeries:
 
         if plot_tidal_range:
             if hasattr(self, "tides"):
-                label = "Thb"
+                label = "TR"
                 for tide in self.tides:
                     if tide.tidal_range is not None:
                         if label not in legend_handles:
@@ -643,6 +645,7 @@ class TidalSeries:
         if plot_mean_tide_level:
             if hasattr(self, "tides"):
                 label = "Tmw"
+                label = "MTL"
                 for tide in self.tides:
                     if tide.mean_tide_level is not None:
                         if label not in legend_handles:
@@ -655,12 +658,14 @@ class TidalSeries:
                 for index, HWLW in self.HWLWs.iterrows():
                     if HWLW["type"] == "HW":
                         label = "Thw"
+                        label = "HW"
                         if label not in legend_handles:
                             legend_handles[label] = ax.plot(index, HWLW[self.surface_elevation.data.name], marker="^", color="red", alpha=0.7, linestyle='None', label=label)
                         else:
                             ax.plot(index, HWLW[self.surface_elevation.data.name], marker="^", color="red", alpha=0.7, linestyle='None')
                     if HWLW["type"] == "LW":
                         label = "Tnw"
+                        label = "LW"
                         if label not in legend_handles:
                             legend_handles[label] = ax.plot(index, HWLW[self.surface_elevation.data.name], marker="v", color="green", alpha=0.7, linestyle='None', label=label)
                         else:
@@ -671,12 +676,14 @@ class TidalSeries:
                 for index, slack in self.slack.iterrows():
                     if slack["type"] == "to_flood":
                         label = "Ke"
+                        label = "Se"
                         if label not in legend_handles:
                             legend_handles[label] = ax.plot(index, slack[self.surface_elevation.data.name], marker="v", markerfacecolor="none", markeredgecolor="green", alpha=0.7, linestyle='None', label=label)
                         else:
                             ax.plot(index, slack[self.surface_elevation.data.name], marker="v", markerfacecolor="none", markeredgecolor="green", alpha=0.7, linestyle='None')
                     if slack["type"] == "to_ebb":
                         label = "Kf"
+                        label = "Sf"
                         if label not in legend_handles:
                             legend_handles[label] = ax.plot(index, slack[self.surface_elevation.data.name], marker="^", markerfacecolor="none", markeredgecolor="red", alpha=0.7, linestyle='None', label=label)
                         else:
@@ -714,6 +721,7 @@ class TidalSeries:
                 for tide in self.tides:
                     if tide.ebb_current_time is not None:
                         label = "Tce"
+                        label = "ECD"
                         if label not in legend_handles:
                             # legend_handles[label] = ax.axvspan(tide.ebb_current_time[0], tide.ebb_current_time[1], alpha=0.07, color='green', label=label)
                             legend_handles[label] = ax.hlines(y = y_min, xmin = tide.ebb_current_time[0], xmax = tide.ebb_current_time[1], linewidth=5, alpha=0.4, color='green', label=label)
@@ -722,6 +730,7 @@ class TidalSeries:
                             ax.hlines(y = y_min, xmin = tide.ebb_current_time[0], xmax = tide.ebb_current_time[1], linewidth=5, alpha=0.4, color='green', label=label)
                     if tide.flood_current_time is not None:
                         label = "Tcf"
+                        label = "FCD"
                         if label not in legend_handles:
                             # legend_handles[label] = ax.axvspan(tide.flood_current_time[0], tide.flood_current_time[1], alpha=0.07, color='red', label=label)
                             legend_handles[label] = ax.hlines(y = y_min, xmin = tide.flood_current_time[0], xmax = tide.flood_current_time[1], linewidth=5, alpha=0.4, color='red', label=label)
@@ -734,12 +743,14 @@ class TidalSeries:
                 for index, slack in self.slack.iterrows():
                     if slack["type"] == "to_flood":
                         label = "Ke"
+                        label = "Se"
                         if label not in legend_handles:
                             legend_handles[label] = ax.plot(index, slack[self.current_direction.data.name], marker="v", markerfacecolor="none", markeredgecolor="green", alpha=0.7, linestyle='None', label=label)
                         else:
                             ax.plot(index, slack[self.current_direction.data.name], marker="v", markerfacecolor="none", markeredgecolor="green", alpha=0.7, linestyle='None')
                     if slack["type"] == "to_ebb":
                         label = "Kf"
+                        label = "Sf"
                         if label not in legend_handles:
                             legend_handles[label] = ax.plot(index, slack[self.current_direction.data.name], marker="^", markerfacecolor="none", markeredgecolor="red", alpha=0.7, linestyle='None', label=label)
                         else:
@@ -750,12 +761,14 @@ class TidalSeries:
                 for index, HWLW in self.HWLWs.iterrows():
                     if HWLW["type"] == "HW":
                         label = "Thw"
+                        label = "HW"
                         if label not in legend_handles:
                             legend_handles[label] = ax.plot(index, HWLW[self.current_direction.data.name], marker="^", color="red", alpha=0.7, linestyle='None', label=label)
                         else:
                             ax.plot(index, HWLW[self.current_direction.data.name], marker="^", color="red", alpha=0.7, linestyle='None')
                     if HWLW["type"] == "LW":
                         label = "Tnw"
+                        label = "LW"
                         if label not in legend_handles:
                             legend_handles[label] = ax.plot(index, HWLW[self.current_direction.data.name], marker="v", color="green", alpha=0.7, linestyle='None', label=label)
                         else:
@@ -784,7 +797,8 @@ class TidalSeries:
             if hasattr(self, "tides"):
                 for tide in self.tides:
                     if tide.ebb_current_time is not None:
-                        label = "Tce"
+                        # label = "Tce"
+                        label = "ECD"
                         if label not in legend_handles:
                             # legend_handles[label] = ax.axvspan(tide.ebb_current_time[0], tide.ebb_current_time[1], alpha=0.07, color='green', label=label)
                             legend_handles[label] = ax.hlines(y = y_min, xmin = tide.ebb_current_time[0], xmax = tide.ebb_current_time[1], linewidth=5, alpha=0.4, color='green', label=label)
@@ -792,7 +806,8 @@ class TidalSeries:
                             # ax.axvspan(tide.ebb_current_time[0], tide.ebb_current_time[1], alpha=0.07, color='green')
                             ax.hlines(y = y_min, xmin = tide.ebb_current_time[0], xmax = tide.ebb_current_time[1], linewidth=5, alpha=0.4, color='green', label=label)
                     if tide.flood_current_time is not None:
-                        label = "Tcf"
+                        # label = "Tcf"
+                        label = "FCD"
                         if label not in legend_handles:
                             # legend_handles[label] = ax.axvspan(tide.flood_current_time[0], tide.flood_current_time[1], alpha=0.07, color='red', label=label)
                             legend_handles[label] = ax.hlines(y = y_min, xmin = tide.flood_current_time[0], xmax = tide.flood_current_time[1], linewidth=5, alpha=0.4, color='red', label=label)
@@ -804,25 +819,25 @@ class TidalSeries:
             if hasattr(self, "tides"):
                 for tide in self.tides:
                     if tide.max_flood_current is not None:
-                        label = "MaxFc"
+                        label = "MaxFCS"
                         if label not in legend_handles:
                             legend_handles[label] = ax.hlines(y=tide.max_flood_current, xmin=tide.low_tide_time, xmax=tide.high_tide_time, alpha=0.5, linewidth=0.7, color='red', linestyle="solid", label=label)
                         else:
                             ax.hlines(y=tide.max_flood_current, xmin=tide.low_tide_time, xmax=tide.high_tide_time, alpha=0.5, linewidth=0.7, color='red', linestyle="solid")
                     if tide.mean_flood_current is not None:
-                        label = "MeanFc"
+                        label = "MeanFCS"
                         if label not in legend_handles:
                             legend_handles[label] = ax.hlines(y=tide.mean_flood_current, xmin=tide.low_tide_time, xmax=tide.high_tide_time, alpha=0.5, linewidth=0.7, color='red', linestyle="dashed", label=label)
                         else:
                             ax.hlines(y=tide.mean_flood_current, xmin=tide.low_tide_time, xmax=tide.high_tide_time, alpha=0.5, linewidth=0.7, color='red', linestyle="dashed")
                     if tide.max_ebb_current is not None:
-                        label = "MaxEc"
+                        label = "MaxECF"
                         if label not in legend_handles:
                             legend_handles[label] = ax.hlines(y=tide.max_ebb_current, xmin=tide.high_tide_time, xmax=tide.low_tide_2_time, alpha=0.5, linewidth=0.7, color='green', linestyle="solid", label=label)
                         else:
                             ax.hlines(y=tide.max_ebb_current, xmin=tide.high_tide_time, xmax=tide.low_tide_2_time, alpha=0.5, linewidth=0.7, color='green', linestyle="solid")
                     if tide.mean_ebb_current is not None:
-                        label = "MeanEc"
+                        label = "MeanECF"
                         if label not in legend_handles:
                             legend_handles[label] = ax.hlines(y=tide.mean_ebb_current, xmin=tide.high_tide_time, xmax=tide.low_tide_2_time, alpha=0.5, linewidth=0.7, color='green', linestyle="dashed", label=label)
                         else:
@@ -832,13 +847,13 @@ class TidalSeries:
             if hasattr(self, "slack"):
                 for index, slack in self.slack.iterrows():
                     if slack["type"] == "to_flood":
-                        label = "Ke"
+                        label = "Se"
                         if label not in legend_handles:
                             legend_handles[label] = ax.plot(index, slack[self.current_speed.data.name], marker="v", markerfacecolor="none", markeredgecolor="green", alpha=0.7, linestyle='None', label=label)
                         else:
                             ax.plot(index, slack[self.current_speed.data.name], marker="v", markerfacecolor="none", markeredgecolor="green", alpha=0.7, linestyle='None')
                     if slack["type"] == "to_ebb":
-                        label = "Kf"
+                        label = "Sf"
                         if label not in legend_handles:
                             legend_handles[label] = ax.plot(index, slack[self.current_speed.data.name], marker="^", markerfacecolor="none", markeredgecolor="red", alpha=0.7, linestyle='None', label=label)
                         else:
@@ -849,12 +864,14 @@ class TidalSeries:
                 for index, HWLW in self.HWLWs.iterrows():
                     if HWLW["type"] == "HW":
                         label = "Thw"
+                        label = "HW"
                         if label not in legend_handles:
                             legend_handles[label] = ax.plot(index, HWLW[self.current_speed.data.name], marker="^", color="red", alpha=0.7, linestyle='None', label=label)
                         else:
                             ax.plot(index, HWLW[self.current_speed.data.name], marker="^", color="red", alpha=0.7, linestyle='None')
                     if HWLW["type"] == "LW":
                         label = "Tnw"
+                        label = "LW"
                         if label not in legend_handles:
                             legend_handles[label] = ax.plot(index, HWLW[self.current_speed.data.name], marker="v", color="green", alpha=0.7, linestyle='None', label=label)
                         else:

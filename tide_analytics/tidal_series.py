@@ -831,13 +831,13 @@ class TidalSeries:
                         else:
                             ax.hlines(y=tide.mean_flood_current, xmin=tide.low_tide_time, xmax=tide.high_tide_time, alpha=0.5, linewidth=0.7, color='red', linestyle="dashed")
                     if tide.max_ebb_current is not None:
-                        label = "MaxECF"
+                        label = "MaxECS"
                         if label not in legend_handles:
                             legend_handles[label] = ax.hlines(y=tide.max_ebb_current, xmin=tide.high_tide_time, xmax=tide.low_tide_2_time, alpha=0.5, linewidth=0.7, color='green', linestyle="solid", label=label)
                         else:
                             ax.hlines(y=tide.max_ebb_current, xmin=tide.high_tide_time, xmax=tide.low_tide_2_time, alpha=0.5, linewidth=0.7, color='green', linestyle="solid")
                     if tide.mean_ebb_current is not None:
-                        label = "MeanECF"
+                        label = "MeanECS"
                         if label not in legend_handles:
                             legend_handles[label] = ax.hlines(y=tide.mean_ebb_current, xmin=tide.high_tide_time, xmax=tide.low_tide_2_time, alpha=0.5, linewidth=0.7, color='green', linestyle="dashed", label=label)
                         else:

@@ -32,8 +32,6 @@ The tide_analytics package can calculate the following tidal characteristics:
 | FD           | Flood Duration           |
 | ECD          | Ebb Current Duration     |
 | FCD          | Flood Current Duration   |
-| ESW          | Ebb Slack Water          |
-| FSW          | Flood Slack Water        |
 | MEANECS      | Mean Ebb Current Speed   |
 | MEANFCS      | Mean Flood Current Speed |
 | MAXECS       | Max Ebb Current Speed |

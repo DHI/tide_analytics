@@ -22,6 +22,10 @@ For detailed usage examples and documentation, please refer to the [notebooks](n
 
 The tide_analytics package can calculate the following tidal characteristics:
 
+<div align="center">
+  <img src="images/errormap.png" alt="Errormap" width="600">
+</div>
+
 | Abbreviation | Description              |
 |--------------|--------------------------|
 | MLW          | Mean Low Water           |

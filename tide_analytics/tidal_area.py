@@ -499,11 +499,11 @@ class TidalArea:
         nan_indices = np.isnan(data)
         sorted_arr = np.unique(data[~nan_indices])
         arr_sorted_indices = np.searchsorted(sorted_arr, data[~nan_indices])
-        data = np.full_like(data, np.nan, dtype=float)
-        data[~nan_indices] = arr_sorted_indices
+        data2 = np.full_like(data, np.nan, dtype=float)
+        data2[~nan_indices] = arr_sorted_indices
 
         dataarray = DataArray(
-            data,
+            data2,
             time=str(self.surface_elevation.data.time.mean()),
             item=ItemInfo("Errors", EUMType.Status, EUMUnit.__),
             geometry=self.surface_elevation.data.geometry,

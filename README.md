@@ -6,11 +6,11 @@
 
 ## Overview
 
-The tide_analytics package is a Python library designed to analyze tidal characteristics from time series data. It provides a comprehensive set of functions and classes to extract and calculate various tidal parameters either on a single element (TidalSeries) or on a complete area (TidalArea). Currently the package supports to ingest the individual timeseries from MIEK .dfsu files. 
+The tide_analytics package is a Python library designed to analyze tidal characteristics from time series data. It provides a comprehensive set of functions and classes to extract and calculate various tidal parameters either on a single element (TidalSeries) or on a complete area (TidalArea). Currently the package supports to ingest the individual timeseries from MIKE .dfsu files. 
 
 ## Installation
 
-You can install the tide_analytics package using pip:
+You can git clone the package, browse to the tide_analytics folder and install it using pip:
 
 `pip install -e .`
 

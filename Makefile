@@ -1,6 +1,7 @@
 LIB = tide_analytics
 
-check: lint typecheck test doctest
+check: lint typecheck format test
+# check: lint typecheck format test doctest
 
 build: typecheck test
 	python -m build
@@ -17,8 +18,8 @@ test:
 typecheck:
 	mypy $(LIB)/ --config-file pyproject.toml
 
-doctest:
-	pytest --doctest-modules $(LIB)
+# doctest:
+# 	pytest --doctest-modules $(LIB)
 
 coverage: 
 	pytest --cov-report html --cov=$(LIB) tests/

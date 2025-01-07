@@ -2,28 +2,50 @@ from dataclasses import dataclass, asdict
 import pandas as pd
 import mikeio
 
-class TideError(Exception): 
+
+class TideError(Exception):
     pass
-class NonAlternatingHWLWsError(TideError): 
+
+
+class NonAlternatingHWLWsError(TideError):
     pass
-class NotEnoughTidesError(TideError): 
+
+
+class NotEnoughTidesError(TideError):
     pass
-class NotEnoughWaterError(TideError): 
+
+
+class NotEnoughWaterError(TideError):
     pass
-class NoSlackPointsFoundError(TideError): 
+
+
+class NoSlackPointsFoundError(TideError):
     pass
-class NoHWLWsFoundError(TideError): 
+
+
+class NoHWLWsFoundError(TideError):
     pass
-class CurrentsToNoisyError(TideError): 
+
+
+class CurrentsToNoisyError(TideError):
     pass
-class NonMatchingSlackError(TideError): 
+
+
+class NonMatchingSlackError(TideError):
     pass
-class FallsWetError(TideError): 
+
+
+class FallsWetError(TideError):
     pass
-class FallsPartiallyDryError(TideError): 
+
+
+class FallsPartiallyDryError(TideError):
     pass
-class FallsPartiallyWetError(TideError): 
+
+
+class FallsPartiallyWetError(TideError):
     pass
+
 
 @dataclass
 class TidalErrors:
@@ -37,17 +59,20 @@ class TidalErrors:
     NonMatchingSlackError: bool = False
     CurrentsToNoisyError: bool = False
     UnknownError: bool = False
-    
+
     def to_dict(self):
         return asdict(self)
 
     def __str__(self):
         active_errors = [
-            f"{key}: {value}" 
-            for key, value in self.to_dict().items() 
-            if value
+            f"{key}: {value}" for key, value in self.to_dict().items() if value
         ]
-        return "\n".join(active_errors) if active_errors else "TidalErrors: No errors or warnings"
+        return (
+            "\n".join(active_errors)
+            if active_errors
+            else "TidalErrors: No errors or warnings"
+        )
+
 
 @dataclass
 class TidalCharacteristics:
@@ -66,7 +91,9 @@ class TidalCharacteristics:
 
     def __str__(self):
         def format_float(value):
-            return f"{value:.4f}" if value is not None and not pd.isna(value) else "None"
+            return (
+                f"{value:.4f}" if value is not None and not pd.isna(value) else "None"
+            )
 
         def format_timedelta(value):
             if value is None or pd.isna(value):
@@ -90,9 +117,10 @@ class TidalCharacteristics:
             f"MEANFCS: {format_float(self.MEANFCS)}",
         ]
         return "\n".join(attributes)
-        
+
     def to_dict(self):
         return asdict(self)
+
 
 @dataclass
 class Tide:
@@ -119,6 +147,7 @@ class Tide:
 
     def to_dict(self):
         return asdict(self)
+
 
 @dataclass
 class Variable:

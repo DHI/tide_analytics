@@ -1598,17 +1598,17 @@ class TidalSeries:
             ValueError: If either current speed and current direction, or velocity x and velocity y are not provided.
         """
 
-        surface_elevation = Variable(
+        surface_elevation_out = Variable(
             data=surface_elevation.to_dataframe().iloc[:, 0],
             unit=surface_elevation.unit.short_name,
         )
 
         if current_speed is not None and current_direction is not None:
-            current_speed = Variable(
+            current_speed_out = Variable(
                 data=current_speed.to_dataframe().iloc[:, 0],
                 unit=current_speed.unit.short_name,
             )
-            current_direction = Variable(
+            current_direction_out = Variable(
                 data=current_direction.to_dataframe().iloc[:, 0],
                 unit=current_direction.unit.short_name,
             )
@@ -1618,11 +1618,11 @@ class TidalSeries:
                 velocity_x, velocity_y
             )
 
-            current_speed = Variable(
+            current_speed_out = Variable(
                 data=current_speed.to_dataframe().iloc[:, 0],
                 unit=current_speed.unit.short_name,
             )
-            current_direction = Variable(
+            current_direction_out = Variable(
                 data=current_direction.to_dataframe().iloc[:, 0],
                 unit=current_direction.unit.short_name,
             )
@@ -1632,7 +1632,7 @@ class TidalSeries:
                 "Either current_speed and current_direction, or current_x and current_y must be provided."
             )
 
-        return surface_elevation, current_speed, current_direction
+        return surface_elevation_out, current_speed_out, current_direction_out
 
     def _convert_uv_to_speeddirection(
         self, velocity_x, velocity_y

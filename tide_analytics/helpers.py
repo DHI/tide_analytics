@@ -1,6 +1,5 @@
 from dataclasses import dataclass, asdict
 import pandas as pd
-import mikeio
 
 
 class TideError(Exception):
@@ -151,5 +150,5 @@ class Tide:
 
 @dataclass
 class Variable:
-    data: pd.Series | mikeio.DataArray
+    data: pd.Series | pd.DataFrame
     unit: str

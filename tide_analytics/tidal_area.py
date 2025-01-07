@@ -5,7 +5,7 @@ import pandas as pd
 from mikeio import DataArray
 import matplotlib.pyplot as plt
 import mikeio
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 from matplotlib.colors import ListedColormap
 from pathlib import Path
 import warnings

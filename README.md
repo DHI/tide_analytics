@@ -1,8 +1,10 @@
-## Tide Analytics - A Python Tool for Analyzing Tidal Characteristics From Time Series Data
 
 <div align="center">
   <img src="images/tide_analytics_logo.png" alt="Logo" width="300">
 </div>
+
+# Tide Analytics 
+A Python Tool for Analyzing Tidal Characteristics From Time Series Data
 
 ## Overview
 

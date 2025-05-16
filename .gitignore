@@ -126,3 +126,6 @@ dmypy.json
 
 # Sphinx
 /doc/_build/
+
+# VScode
+.vscode
